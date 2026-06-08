@@ -1961,6 +1961,9 @@
     <ClCompile Include="Source\Game\Musou\MainBoss\MainBossCharacter.cpp">
       <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Musou\MainBoss\MainBossEncounterManager.cpp">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Musou\MainBoss\MainBossPatternComponent.cpp">
       <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClCompile>
@@ -3564,6 +3567,9 @@
       <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\MainBoss\MainBossCharacter.h">
+      <Filter>Source\Game\Musou\MainBoss</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Musou\MainBoss\MainBossEncounterManager.h">
       <Filter>Source\Game\Musou\MainBoss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Musou\MainBoss\MainBossPatternComponent.h">

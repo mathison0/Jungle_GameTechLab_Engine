@@ -28,6 +28,10 @@ public:
 	EMainBossPatternState GetState() const { return State; }
 	void NotifyThrowAimStart();
 	void NotifyAttackBeforeBroadcast(FName AttackId);
+	void PrepareDormantPose();
+	float PlayEncounterGettingUp(APawn* Target);
+	float PlayEncounterBattlecry(APawn* Target);
+	void StartEncounterCombat();
 
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Idle Sequence", AssetType="UAnimSequence")
 	FString IdleSequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Idle_mixamo_com.uasset";
@@ -35,8 +39,14 @@ public:
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Chase Sequence", AssetType="UAnimSequence")
 	FString ChaseSequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Walk_mixamo_com.uasset";
 
+	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Getting Up Sequence", AssetType="UAnimSequence")
+	FString GettingUpSequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Getting_Up_mixamo_com.uasset";
+
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Battlecry Sequence", AssetType="UAnimSequence")
 	FString BattlecrySequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Battlecry_mixamo_com.uasset";
+
+	UPROPERTY(Edit, Save, Category="Main Boss|Encounter", DisplayName="Start Dormant")
+	bool bStartDormant = false;
 
 	UPROPERTY(Edit, Save, Category="Main Boss|Warning Rim", DisplayName="Use Attack Start Warning Rim")
 	bool bUseAttackStartWarningRim = true;
@@ -108,6 +118,8 @@ private:
 	bool bPhase2Pending = false;
 	bool bPhase2Entered = false;
 	bool bThrowAimActive = false;
+	bool bDormant = false;
+	bool bEncounterCinematic = false;
 	bool bPatternEnabled = true;
 	uint32 RandomState = 0x2468ace1u;
 	FString CurrentSequencePath;

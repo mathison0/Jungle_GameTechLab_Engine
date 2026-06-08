@@ -3533,6 +3533,315 @@
         }
       }
     }, {
+      "ClassName" : "AMainBossCharacter",
+      "Name" : "AMainBossCharacter_FinalBoss",
+      "NonSceneComponents" : [{
+          "ClassName" : "UCharacterMovementComponent",
+          "Name" : "UCharacterMovementComponent_FinalBoss",
+          "ObjectId" : 205,
+          "Properties" : {
+            "BrakingFriction" : 8.000000,
+            "ControllerContactOffset" : 0.050000,
+            "ControllerMinMoveDistance" : 0.001000,
+            "ControllerSyncTeleportDistance" : 1.000000,
+            "FloorProbeDistance" : 0.100000,
+            "Gravity" : 9.800000,
+            "GroundMissToleranceFrames" : 2,
+            "JumpZVelocity" : 6.000000,
+            "MaxAcceleration" : 20.000000,
+            "MaxStepHeight" : 0.400000,
+            "MaxWalkSpeed" : 2.400000,
+            "RotationYawRate" : 540.000000,
+            "UpdatedComponent" : {
+              "ObjectId" : 201
+            },
+            "WalkableSlopeAngle" : 45.000000,
+            "bApplyRootMotionRotation" : false,
+            "bAutoActivate" : true,
+            "bAutoRegisterUpdatedComponent" : false,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bOrientRotationToMovement" : false,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "ULuaScriptComponent",
+          "Name" : "ULuaScriptComponent_FinalBoss",
+          "ObjectId" : 206,
+          "Properties" : {
+            "LuaPropertyOverrides" : [],
+            "ScriptFile" : "",
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UBattleComponent",
+          "Name" : "UBattleComponent_FinalBoss",
+          "ObjectId" : 207,
+          "Properties" : {
+            "AttackPower" : 22.000000,
+            "MaxHealth" : 2200.000000,
+            "bAcceptKnockback" : false,
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bIsPlayerTeam" : false,
+            "bTickEnable" : true
+          }
+        }, {
+          "ClassName" : "UMainBossPatternComponent",
+          "Name" : "UMainBossPatternComponent_FinalBoss",
+          "ObjectId" : 208,
+          "Properties" : {
+            "AttackStartWarningRimColor" : [1.000000, 0.050000, 0.020000, 1.000000],
+            "AttackStartWarningRimDuration" : 0.350000,
+            "AttackStartWarningRimFillAmount" : 0.000000,
+            "AttackStartWarningRimIntensity" : 2.500000,
+            "AttackStartWarningRimRimIntensity" : 5.000000,
+            "AttackStartWarningRimRimPower" : 3.000000,
+            "BattlecrySequencePath" : "Content/Data/GameJam/Golem_Boss/Golem_Boss_Battlecry_mixamo_com.uasset",
+            "ChaseSequencePath" : "Content/Data/GameJam/Golem_Boss/Golem_Boss_Walk_mixamo_com.uasset",
+            "GettingUpSequencePath" : "Content/Data/GameJam/Golem_Boss/Golem_Boss_Getting_Up_mixamo_com.uasset",
+            "IdleSequencePath" : "Content/Data/GameJam/Golem_Boss/Golem_Boss_Idle_mixamo_com.uasset",
+            "bAutoActivate" : true,
+            "bDebugLog" : false,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bStartDormant" : true,
+            "bTickEnable" : true,
+            "bUseAttackStartWarningRim" : true
+          }
+        }, {
+          "ClassName" : "UHitFlashComponent",
+          "Name" : "UHitFlashComponent_FinalBoss",
+          "ObjectId" : 209,
+          "Properties" : {
+            "Duration" : 0.120000,
+            "FillAmount" : 0.150000,
+            "FlashColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+            "Intensity" : 1.000000,
+            "RimIntensity" : 3.000000,
+            "RimPower" : 3.000000,
+            "bAutoActivate" : true,
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
+        }],
+      "ObjectId" : 200,
+      "Properties" : {
+        "DisplayName" : "Golem",
+        "PendingActorLocation" : [-175.382050, 123.238503, 6.721152],
+        "PendingActorRotation" : [-0.000000, -60.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "FinalBoss",
+        "bAutoPossessPlayer" : false,
+        "bNeedsTick" : true,
+        "bUseControllerRotationPitch" : false,
+        "bUseControllerRotationRoll" : false,
+        "bUseControllerRotationYaw" : false
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "USkeletalMeshComponent",
+            "Name" : "USkeletalMeshComponent_FinalBoss",
+            "ObjectId" : 202,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "AnimInstance" : {
+                "ClassName" : "UAnimSingleNodeInstance",
+                "Properties" : {
+                  "RootMotionMode" : 1
+                }
+              },
+              "AnimInstanceClass" : "None",
+              "AnimationData" : {
+                "AnimToPlayPath" : "Content/Data/GameJam/Golem_Boss/Golem_Boss_Getting_Up_mixamo_com.uasset",
+                "PlayRate" : 1.000000,
+                "bLooping" : false,
+                "bPlaying" : false
+              },
+              "AnimationMode" : 1,
+              "AnimationTickLOD" : 4,
+              "AnimationTickLODPolicy" : 0,
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlots" : ["Content/Material/Auto/M_Golem.mat"],
+              "ObjectType" : 0,
+              "PhysicsBlendWeight" : 1.000000,
+              "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+              "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+              "RagdollRecoveryBlendDuration" : 0.350000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, -2.956617],
+              "RelativeTransform.Scale" : [3.000000, 3.000000, 3.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "SkeletalMeshPath" : "Content/Data/GameJam/Golem_Boss/SM_Golem_Boss_SkeletalMesh.uasset",
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : false,
+              "bEnableAnimationTickLOD" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            }
+          }, {
+            "Children" : [{
+                "Children" : [],
+                "ClassName" : "UCameraComponent",
+                "Name" : "UCameraComponent_FinalBoss",
+                "ObjectId" : 204,
+                "Properties" : {
+                  "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+                  "CameraState.FOV" : 1.047198,
+                  "CameraState.FarZ" : 1000.000000,
+                  "CameraState.NearZ" : 0.100000,
+                  "CameraState.OrthoWidth" : 10.000000,
+                  "CameraState.bIsOrthogonal" : false,
+                  "DepthOfField.FStop" : 4.000000,
+                  "DepthOfField.FocusDistance" : 10.000000,
+                  "DepthOfField.GatherRingCount" : 6,
+                  "DepthOfField.GatherSamplesPerRing" : 20,
+                  "DepthOfField.SensorWidth" : 24.576000,
+                  "DepthOfField.bEnableBackground" : true,
+                  "DepthOfField.bEnableForeground" : true,
+                  "DepthOfField.bEnabled" : false,
+                  "DepthOfField.bHalfRes" : true,
+                  "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+                  "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+                  "bAutoActivate" : true,
+                  "bEditorOnly" : false,
+                  "bHiddenInComponentTree" : false,
+                  "bIsActive" : true,
+                  "bTickEnable" : true
+                }
+              }],
+            "ClassName" : "USpringArmComponent",
+            "Name" : "USpringArmComponent_FinalBoss",
+            "ObjectId" : 203,
+            "Properties" : {
+              "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+              "CameraLagMaxDistance" : 0.000000,
+              "CameraLagSpeed" : 10.000000,
+              "CameraRotationLagSpeed" : 10.000000,
+              "ProbeChannel" : 0,
+              "ProbeSize" : 0.120000,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "SocketOffset" : [0.000000, 0.000000, 3.000000],
+              "TargetArmLength" : 10.000000,
+              "TargetOffset" : [0.000000, 0.000000, 0.000000],
+              "bAutoActivate" : true,
+              "bDoCollisionTest" : false,
+              "bEditorOnly" : false,
+              "bEnableCameraLag" : true,
+              "bEnableCameraRotationLag" : true,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UCapsuleComponent",
+        "Name" : "UCapsuleComponent_FinalBoss",
+        "ObjectId" : 201,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "CachedEditRotator" : [-0.000000, -60.000000, 0.000000],
+          "CapsuleHalfHeight" : 3.000000,
+          "CapsuleRadius" : 1.800000,
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "ObjectType" : 0,
+          "RelativeTransform.Location" : [-175.382050, 123.238503, 6.721152],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "ShapeColor" : [0.000000, 1.000000, 0.000000, 1.000000],
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : false,
+          "bCastShadowAsTwoSided" : false,
+          "bDrawOnlyIfSelected" : false,
+          "bEditorOnly" : false,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "AMainBossEncounterManager",
+      "Name" : "AMainBossEncounterManager_FinalBoss",
+      "NonSceneComponents" : [],
+      "ObjectId" : 210,
+      "Properties" : {
+        "CameraBlendIn" : 0.350000,
+        "CameraBlendOut" : 0.350000,
+        "CameraOffset" : [10.500000, -2.500000, 4.000000],
+        "EncounterFOV" : 0.872665,
+        "LookAtHeight" : 4.000000,
+        "MainBossTag" : "FinalBoss",
+        "MiddleBossTag" : "WarriorBoss",
+        "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bAutoStart" : true,
+        "bHideHudDuringCinematic" : true,
+        "bLockPlayerDuringCinematic" : true,
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USceneComponent",
+        "Name" : "USceneComponent_FinalBossEncounter",
+        "ObjectId" : 211,
+        "Properties" : {
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "bAutoActivate" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
       "ClassName" : "AActor",
       "Name" : "Play2BGM",
       "NonSceneComponents" : [{

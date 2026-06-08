@@ -84,12 +84,25 @@ void UMainBossPatternComponent::BeginPlay()
 {
 	UActorComponent::BeginPlay();
 	BuildDefaultPatterns();
-	EnterDecide();
+	if (bStartDormant)
+	{
+		PrepareDormantPose();
+	}
+	else
+	{
+		EnterDecide();
+	}
 }
 
 void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (bDormant || bEncounterCinematic)
+	{
+		ResetThrowAim();
+		return;
+	}
 
 	if (!bPatternEnabled)
 	{
@@ -261,6 +274,87 @@ void UMainBossPatternComponent::NotifyAttackBeforeBroadcast(FName AttackId)
 
 	FaceTarget(ResolvePlayerPawn());
 	bThrowAimActive = false;
+}
+
+void UMainBossPatternComponent::PrepareDormantPose()
+{
+	ResetThrowAim();
+	bDormant = true;
+	bEncounterCinematic = false;
+	bPatternEnabled = false;
+	CurrentPattern = nullptr;
+	CurrentStepIndex = 0;
+	State = EMainBossPatternState::Decide;
+	StateTime = 0.0f;
+	ActiveExecutionTime = 0.0f;
+
+	AActor* Owner = GetOwner();
+	USkeletalMeshComponent* Mesh = Owner ? Owner->GetComponentByClass<USkeletalMeshComponent>() : nullptr;
+	if (!Mesh || GettingUpSequencePath.empty())
+	{
+		return;
+	}
+
+	UAnimSequence* Sequence = FAnimationManager::Get().LoadAnimation(GettingUpSequencePath);
+	if (!Sequence)
+	{
+		if (bDebugLog)
+		{
+			UE_LOG("[MainBoss] getting up animation load failed: %s", GettingUpSequencePath.c_str());
+		}
+		return;
+	}
+
+	Mesh->PlayAnimation(Sequence, false);
+	Mesh->SetPlayRate(1.0f);
+	Mesh->SetPlaying(false);
+	CurrentSequencePath = GettingUpSequencePath;
+}
+
+float UMainBossPatternComponent::PlayEncounterGettingUp(APawn* Target)
+{
+	ResetThrowAim();
+	bDormant = false;
+	bEncounterCinematic = true;
+	bPatternEnabled = false;
+	CurrentPattern = nullptr;
+	CurrentStepIndex = 0;
+	State = EMainBossPatternState::Decide;
+	StateTime = 0.0f;
+	ActiveExecutionTime = 0.0f;
+
+	FaceTarget(Target);
+	UAnimSequence* Sequence = PlaySequencePath(GettingUpSequencePath, false, 1.0f, true);
+	return Sequence ? (std::max)(Sequence->GetPlayLength(), 0.2f) : 1.0f;
+}
+
+float UMainBossPatternComponent::PlayEncounterBattlecry(APawn* Target)
+{
+	ResetThrowAim();
+	bDormant = false;
+	bEncounterCinematic = true;
+	bPatternEnabled = false;
+	CurrentPattern = nullptr;
+	CurrentStepIndex = 0;
+	State = EMainBossPatternState::Battlecry;
+	StateTime = 0.0f;
+	ActiveExecutionTime = 0.0f;
+
+	FaceTarget(Target);
+	UAnimSequence* Sequence = PlaySequencePath(BattlecrySequencePath, false, 1.0f, true);
+	return Sequence ? (std::max)(Sequence->GetPlayLength(), 0.2f) : 1.0f;
+}
+
+void UMainBossPatternComponent::StartEncounterCombat()
+{
+	ResetThrowAim();
+	bDormant = false;
+	bEncounterCinematic = false;
+	bPatternEnabled = true;
+	bPhase2Pending = false;
+	bPhase2Entered = false;
+	PatternCooldowns.clear();
+	EnterDecide();
 }
 
 void UMainBossPatternComponent::BuildDefaultPatterns()

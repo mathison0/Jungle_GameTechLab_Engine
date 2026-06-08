@@ -686,17 +686,22 @@ void AMusouGameMode::NotifyVictory()
 
 void AMusouGameMode::NotifyFinalBossEncounterStarted()
 {
+	(void)TryStartFinalBossEncounterDialog();
+}
+
+bool AMusouGameMode::TryStartFinalBossEncounterDialog()
+{
 	AMusouGameState* MusouState = GetMusouGameState();
 	if ((MusouState && MusouState->IsMatchEnded()) || HudPresenter.IsStoryDialogActive() || HudPresenter.IsResultOverlayVisible())
 	{
-		return;
+		return false;
 	}
 
 	SetStopMenuVisible(false);
 
 	if (!HudPresenter.StartFinalBossDialog())
 	{
-		return;
+		return false;
 	}
 
 	SetGameInputPossessed(false);
@@ -708,6 +713,13 @@ void AMusouGameMode::NotifyFinalBossEncounterStarted()
 	{
 		World->SetPaused(true);
 	}
+
+	return true;
+}
+
+bool AMusouGameMode::IsFinalBossEncounterDialogActive() const
+{
+	return HudPresenter.IsFinalBossDialogVisible();
 }
 
 void AMusouGameMode::SetHudVisible(bool bVisible)
