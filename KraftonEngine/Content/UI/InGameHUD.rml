@@ -28,6 +28,15 @@
 			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
+		#death-title,
+		#victory-title,
+		#victory-score,
+		#victory-details,
+		.victory-detail-item,
+		.victory-detail-separator {
+			font-effect: glow(2px 6px 4px 4px #080202d8);
+		}
+
 		#status-panel {
 			position: absolute;
 			left: 36px;
@@ -649,6 +658,7 @@
 			color: #d6ccb1;
 			text-align: right;
 			white-space: nowrap;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		.scoreboard-empty {
@@ -976,6 +986,11 @@
 
 		#victory-menu .pause-button-label {
 			line-height: 44px;
+		}
+
+		#death-menu .pause-button-label,
+		#victory-menu .pause-button-label {
+			font-effect: glow(1px 3px 2px 2px #080202cc);
 		}
 
 		.pause-button.selected .pause-button-frame-normal {

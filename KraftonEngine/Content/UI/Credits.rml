@@ -12,6 +12,18 @@
 			font-weight: bold;
 		}
 
+		#credits-game-title,
+		#credits-thanks {
+			font-effect: glow(2px 6px 4px 4px #080202d8);
+		}
+
+		#credits-lab,
+		.credits-section-title,
+		.credits-name,
+		#credits-skip-hint {
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
 		#credits-root {
 			position: relative;
 			width: 100%;
