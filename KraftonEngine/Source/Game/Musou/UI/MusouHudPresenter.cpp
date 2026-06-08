@@ -28,8 +28,9 @@ namespace
 	constexpr float DeathTitleFadeDelay = 0.25f;
 	constexpr float DeathTitleFadeDuration = 1.15f;
 
-	constexpr float IntroDialogCharsPerSecond = 24.0f;
-	constexpr float IntroDialogIndicatorPulseSpeed = 5.0f;
+	constexpr float StoryDialogCharsPerSecond = 24.0f;
+	constexpr float StoryDialogIndicatorPulseSpeed = 5.0f;
+	constexpr float StoryDialogFadeOutDuration = 1.0f;
 
 	// 승리 결과 연출은 배경 → 타이틀 → 점수/세부 결과 순서로 차례로 드러낸다.
 	// 버튼은 점수 영역의 페이드인이 끝난 뒤 활성화된다.
@@ -127,6 +128,19 @@ namespace
 		return Pages;
 	}
 
+	const TArray<FString>& GetOutroDialogPages()
+	{
+		static const TArray<FString> Pages = {
+			"골렘의 거대한 몸이 무너져 내렸다.",
+			"대지를 뒤흔들던 포효는 사라지고,\n전장을 뒤덮었던 어둠도 천천히 걷히기 시작했다.",
+			"수많은 싸움과 희생 끝에,\n세계는 다시 평화를 되찾았다.",
+			"하지만 이 평화가 영원할지는 아무도 알 수 없다.",
+			"언젠가 또 다른 어둠이 찾아온다면,\n우리는 다시 검을 들 것이다.",
+			"정글의 땅을 지키기 위해.",
+		};
+		return Pages;
+	}
+
 	int32 GetUtf8CodepointLength(unsigned char LeadByte)
 	{
 		if ((LeadByte & 0x80) == 0)
@@ -167,7 +181,7 @@ namespace
 		return Escaped;
 	}
 
-	int32 CountIntroDialogGlyphs(const FString& Text)
+	int32 CountStoryDialogGlyphs(const FString& Text)
 	{
 		int32 Count = 0;
 		for (size_t Index = 0; Index < Text.size();)
@@ -188,7 +202,7 @@ namespace
 		return Count;
 	}
 
-	FString MakeIntroDialogTextRml(const FString& Text, float VisibleGlyphs)
+	FString MakeStoryDialogTextRml(const FString& Text, float VisibleGlyphs)
 	{
 		const int32 FullyVisibleGlyphs = static_cast<int32>(std::floor(std::max(0.0f, VisibleGlyphs)));
 		const float CurrentGlyphAlpha = std::clamp(VisibleGlyphs - static_cast<float>(FullyVisibleGlyphs), 0.0f, 1.0f);
@@ -227,7 +241,7 @@ namespace
 				GlyphAlpha = CurrentGlyphAlpha;
 			}
 
-			Rml += "<span class=\"intro-dialog-glyph\" style=\"opacity:";
+			Rml += "<span class=\"story-dialog-glyph\" style=\"opacity:";
 			Rml += MakeOpacityValue(GlyphAlpha);
 			Rml += ";\">";
 			Rml += (C == ' ') ? "&#160;" : EscapeRmlText(Glyph);
@@ -299,66 +313,55 @@ void FMusouHudPresenter::Tick(float DeltaTime, const AMusouGameState* MusouState
 	}
 
 	UpdateBloodVignette(DeltaTime);
-	UpdateIntroDialog(DeltaTime);
+	UpdateStoryDialog(DeltaTime);
 	UpdateDeathOverlay(DeltaTime);
 	UpdateVictoryOverlay(DeltaTime);
 }
 
 bool FMusouHudPresenter::StartIntroDialog()
 {
-	if (!Widget || !Widget->IsDocumentLoaded() || GetIntroDialogPages().empty())
-	{
-		return false;
-	}
-
-	bIntroDialogVisible = true;
-	IntroDialogPageIndex = 0;
-	IntroDialogTextProgress = 0.0f;
-	IntroDialogElapsed = 0.0f;
-
-	Widget->SetProperty("intro-dialog-overlay", "display", "block");
-	Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
-	Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
-	Widget->SetText("intro-dialog-text", "");
-	Widget->SetWantsMouse(false);
-	RenderIntroDialogText();
-	return true;
+	return StartStoryDialog(EStoryDialogKind::Intro);
 }
 
-bool FMusouHudPresenter::AdvanceIntroDialog()
+bool FMusouHudPresenter::StartOutroDialog()
 {
-	if (!bIntroDialogVisible)
+	return StartStoryDialog(EStoryDialogKind::Outro);
+}
+
+bool FMusouHudPresenter::AdvanceStoryDialog()
+{
+	if (StoryDialogKind == EStoryDialogKind::None || bStoryDialogFadeOutActive)
 	{
 		return false;
 	}
 
-	const TArray<FString>& Pages = GetIntroDialogPages();
-	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	const TArray<FString>& Pages = GetActiveStoryDialogPages();
+	if (StoryDialogPageIndex < 0 || StoryDialogPageIndex >= static_cast<int32>(Pages.size()))
 	{
-		FinishIntroDialog();
+		FinishStoryDialog();
 		return true;
 	}
 
-	const int32 CurrentGlyphCount = CountIntroDialogGlyphs(Pages[IntroDialogPageIndex]);
-	if (IntroDialogTextProgress < static_cast<float>(CurrentGlyphCount))
+	const int32 CurrentGlyphCount = CountStoryDialogGlyphs(Pages[StoryDialogPageIndex]);
+	if (StoryDialogTextProgress < static_cast<float>(CurrentGlyphCount))
 	{
-		IntroDialogTextProgress = static_cast<float>(CurrentGlyphCount);
-		RenderIntroDialogText();
+		StoryDialogTextProgress = static_cast<float>(CurrentGlyphCount);
+		RenderStoryDialogText();
 		return false;
 	}
 
-	if (IntroDialogPageIndex + 1 < static_cast<int32>(Pages.size()))
+	if (StoryDialogPageIndex + 1 < static_cast<int32>(Pages.size()))
 	{
-		++IntroDialogPageIndex;
-		IntroDialogTextProgress = 0.0f;
-		IntroDialogElapsed = 0.0f;
-		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
-		Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
-		RenderIntroDialogText();
+		++StoryDialogPageIndex;
+		StoryDialogTextProgress = 0.0f;
+		StoryDialogElapsed = 0.0f;
+		Widget->SetProperty("story-dialog-next-indicator", "visibility", "hidden");
+		Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
+		RenderStoryDialogText();
 		return false;
 	}
 
-	FinishIntroDialog();
+	FinishStoryDialog();
 	return true;
 }
 
@@ -646,80 +649,151 @@ void FMusouHudPresenter::UpdateBloodVignette(float DeltaTime)
 	}
 }
 
-void FMusouHudPresenter::UpdateIntroDialog(float DeltaTime)
+void FMusouHudPresenter::UpdateStoryDialog(float DeltaTime)
 {
-	if (!bIntroDialogVisible || !Widget || !Widget->IsDocumentLoaded())
+	if ((!IsStoryDialogActive()) || !Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
 
-	const TArray<FString>& Pages = GetIntroDialogPages();
-	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	if (bStoryDialogFadeOutActive)
 	{
-		FinishIntroDialog();
+		StoryDialogFadeOutElapsed += DeltaTime;
+		const float Alpha = 1.0f - SmoothStep01(StoryDialogFadeOutElapsed / StoryDialogFadeOutDuration);
+		Widget->SetProperty("story-dialog-overlay", "display", "block");
+		Widget->SetProperty("story-dialog-overlay", "opacity", MakeOpacityValue(Alpha));
+		if (Alpha <= 0.0f)
+		{
+			bStoryDialogFadeOutActive = false;
+			StoryDialogFadeOutElapsed = 0.0f;
+			Widget->SetProperty("story-dialog-overlay", "display", "none");
+			Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+			Widget->SetProperty("story-dialog-panel", "display", "block");
+		}
 		return;
 	}
 
-	IntroDialogElapsed += DeltaTime;
+	const TArray<FString>& Pages = GetActiveStoryDialogPages();
+	if (StoryDialogPageIndex < 0 || StoryDialogPageIndex >= static_cast<int32>(Pages.size()))
+	{
+		FinishStoryDialog();
+		return;
+	}
 
-	const int32 CurrentGlyphCount = CountIntroDialogGlyphs(Pages[IntroDialogPageIndex]);
-	const float PreviousProgress = IntroDialogTextProgress;
-	IntroDialogTextProgress = std::min(
+	StoryDialogElapsed += DeltaTime;
+
+	const int32 CurrentGlyphCount = CountStoryDialogGlyphs(Pages[StoryDialogPageIndex]);
+	const float PreviousProgress = StoryDialogTextProgress;
+	StoryDialogTextProgress = std::min(
 		static_cast<float>(CurrentGlyphCount),
-		IntroDialogTextProgress + DeltaTime * IntroDialogCharsPerSecond);
+		StoryDialogTextProgress + DeltaTime * StoryDialogCharsPerSecond);
 
-	if (IntroDialogTextProgress != PreviousProgress)
+	if (StoryDialogTextProgress != PreviousProgress)
 	{
-		RenderIntroDialogText();
+		RenderStoryDialogText();
 	}
 
-	const bool bPageComplete = IntroDialogTextProgress >= static_cast<float>(CurrentGlyphCount);
+	const bool bPageComplete = StoryDialogTextProgress >= static_cast<float>(CurrentGlyphCount);
 	if (bPageComplete)
 	{
-		const float Pulse = 0.5f + 0.5f * static_cast<float>(std::sin(IntroDialogElapsed * IntroDialogIndicatorPulseSpeed));
-		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "visible");
-		Widget->SetProperty("intro-dialog-next-indicator", "opacity", MakeOpacityValue(0.45f + Pulse * 0.55f));
+		const float Pulse = 0.5f + 0.5f * static_cast<float>(std::sin(StoryDialogElapsed * StoryDialogIndicatorPulseSpeed));
+		Widget->SetProperty("story-dialog-next-indicator", "visibility", "visible");
+		Widget->SetProperty("story-dialog-next-indicator", "opacity", MakeOpacityValue(0.45f + Pulse * 0.55f));
 	}
 	else
 	{
-		Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
-		Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
+		Widget->SetProperty("story-dialog-next-indicator", "visibility", "hidden");
+		Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
 	}
 }
 
-void FMusouHudPresenter::RenderIntroDialogText()
+void FMusouHudPresenter::RenderStoryDialogText()
 {
-	if (!bIntroDialogVisible || !Widget || !Widget->IsDocumentLoaded())
+	if (StoryDialogKind == EStoryDialogKind::None || !Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
 
-	const TArray<FString>& Pages = GetIntroDialogPages();
-	if (IntroDialogPageIndex < 0 || IntroDialogPageIndex >= static_cast<int32>(Pages.size()))
+	const TArray<FString>& Pages = GetActiveStoryDialogPages();
+	if (StoryDialogPageIndex < 0 || StoryDialogPageIndex >= static_cast<int32>(Pages.size()))
 	{
 		return;
 	}
 
-	Widget->SetText("intro-dialog-text", MakeIntroDialogTextRml(Pages[IntroDialogPageIndex], IntroDialogTextProgress));
+	Widget->SetText("story-dialog-text", MakeStoryDialogTextRml(Pages[StoryDialogPageIndex], StoryDialogTextProgress));
 }
 
-void FMusouHudPresenter::FinishIntroDialog()
+void FMusouHudPresenter::FinishStoryDialog()
 {
-	bIntroDialogVisible = false;
-	IntroDialogPageIndex = 0;
-	IntroDialogTextProgress = 0.0f;
-	IntroDialogElapsed = 0.0f;
+	const EStoryDialogKind FinishedKind = StoryDialogKind;
+	StoryDialogKind = EStoryDialogKind::None;
+	StoryDialogPageIndex = 0;
+	StoryDialogTextProgress = 0.0f;
+	StoryDialogElapsed = 0.0f;
 
 	if (!Widget || !Widget->IsDocumentLoaded())
 	{
 		return;
 	}
 
-	Widget->SetText("intro-dialog-text", "");
-	Widget->SetProperty("intro-dialog-overlay", "display", "none");
-	Widget->SetProperty("intro-dialog-next-indicator", "visibility", "hidden");
-	Widget->SetProperty("intro-dialog-next-indicator", "opacity", "0");
 	Widget->SetWantsMouse(false);
+
+	if (FinishedKind == EStoryDialogKind::Outro)
+	{
+		bStoryDialogFadeOutActive = true;
+		StoryDialogFadeOutElapsed = 0.0f;
+		Widget->SetProperty("story-dialog-panel", "display", "none");
+		Widget->SetProperty("story-dialog-overlay", "display", "block");
+		Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+		return;
+	}
+
+	Widget->SetProperty("story-dialog-overlay", "display", "none");
+	Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+	Widget->SetProperty("story-dialog-panel", "display", "block");
+}
+
+bool FMusouHudPresenter::StartStoryDialog(EStoryDialogKind InKind)
+{
+	StoryDialogKind = InKind;
+	const TArray<FString>& Pages = GetActiveStoryDialogPages();
+	if (!Widget || !Widget->IsDocumentLoaded() || Pages.empty())
+	{
+		StoryDialogKind = EStoryDialogKind::None;
+		return false;
+	}
+
+	bStoryDialogFadeOutActive = false;
+	StoryDialogPageIndex = 0;
+	StoryDialogTextProgress = 0.0f;
+	StoryDialogElapsed = 0.0f;
+	StoryDialogFadeOutElapsed = 0.0f;
+
+	Widget->SetProperty("story-dialog-overlay", "opacity", "1");
+	Widget->SetProperty("story-dialog-next-indicator", "visibility", "hidden");
+	Widget->SetProperty("story-dialog-next-indicator", "opacity", "0");
+	Widget->SetText("story-dialog-text", "");
+	Widget->SetWantsMouse(false);
+	RenderStoryDialogText();
+	Widget->SetProperty("story-dialog-panel", "display", "block");
+	Widget->SetProperty("story-dialog-overlay", "display", "block");
+	return true;
+}
+
+const TArray<FString>& FMusouHudPresenter::GetActiveStoryDialogPages() const
+{
+	switch (StoryDialogKind)
+	{
+	case EStoryDialogKind::Intro:
+		return GetIntroDialogPages();
+	case EStoryDialogKind::Outro:
+		return GetOutroDialogPages();
+	default:
+		break;
+	}
+
+	static const TArray<FString> EmptyPages;
+	return EmptyPages;
 }
 
 void FMusouHudPresenter::UpdateDeathOverlay(float DeltaTime)

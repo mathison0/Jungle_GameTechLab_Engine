@@ -224,16 +224,30 @@ void AMusouGameMode::Tick(float DeltaTime)
 	TickHitSlomoQueue(DeltaTime);
 
 	InputSystem& Input = InputSystem::Get();
-	if (HudPresenter.IsIntroDialogVisible())
+	if (HudPresenter.IsStoryDialogActive())
 	{
-		if (Input.GetKeyDown(VK_SPACE) || Input.GetKeyDown(VK_LBUTTON))
+		const bool bWasIntroDialog = HudPresenter.IsIntroDialogVisible();
+		const bool bWasOutroDialog = HudPresenter.IsOutroDialogVisible();
+		if ((bWasIntroDialog || bWasOutroDialog) && (Input.GetKeyDown(VK_SPACE) || Input.GetKeyDown(VK_LBUTTON)))
 		{
-			if (HudPresenter.AdvanceIntroDialog())
+			if (HudPresenter.AdvanceStoryDialog())
 			{
-				SetGameInputPossessed(true);
-				if (UWorld* World = GetWorld())
+				if (bWasIntroDialog)
 				{
-					World->SetPaused(false);
+					SetGameInputPossessed(true);
+					if (UWorld* World = GetWorld())
+					{
+						World->SetPaused(false);
+					}
+				}
+				else if (bWasOutroDialog)
+				{
+					HudPresenter.StartVictoryOverlay(PendingVictoryResult, FMusouScoreboard::LoadEntries());
+					VictoryMenuNavigator.ClearSelection();
+					if (UWorld* World = GetWorld())
+					{
+						World->SetPaused(false);
+					}
 				}
 			}
 		}
@@ -506,19 +520,21 @@ void AMusouGameMode::NotifyVictory()
 	SetGameInputPossessed(false);
 	bStopMenuVisible = false;
 
-	// 스코어보드 저장, outro 시작 같은 후속 시스템은 여기에서 Result를 구독하면 된다.
+	// 스코어보드 저장 같은 후속 시스템은 여기에서 Result를 구독하면 된다.
 	OnVictoryResolved.Broadcast(Result);
 
-	// 현재 단계에서는 승리 오버레이를 즉시 띄운다. 나중에 outro가 생기면
-	// outro 시작/종료 타이밍에 맞춰 이 호출 위치만 조정하면 된다.
-	HudPresenter.StartVictoryOverlay(Result, FMusouScoreboard::LoadEntries());
+	const bool bStartedOutroDialog = HudPresenter.StartOutroDialog();
+	if (!bStartedOutroDialog)
+	{
+		HudPresenter.StartVictoryOverlay(Result, FMusouScoreboard::LoadEntries());
+	}
 	PauseMenuNavigator.ClearSelection();
 	DeathMenuNavigator.ClearSelection();
 	VictoryMenuNavigator.ClearSelection();
 
 	if (UWorld* World = GetWorld())
 	{
-		World->SetPaused(false);
+		World->SetPaused(bStartedOutroDialog);
 	}
 }
 
@@ -588,7 +604,7 @@ void AMusouGameMode::SubmitVictoryScore()
 
 void AMusouGameMode::SetStopMenuVisible(bool bVisible)
 {
-	if (HudPresenter.IsIntroDialogVisible() || HudPresenter.IsResultOverlayVisible())
+	if (HudPresenter.IsStoryDialogActive() || HudPresenter.IsResultOverlayVisible())
 	{
 		return;
 	}
