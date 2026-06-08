@@ -53,6 +53,7 @@ public:
 	void SetDebugDrawEnabled(bool bEnabled) { bDebugDrawEnabled = bEnabled; }
 	bool IsDebugDrawEnabled() const { return bDebugDrawEnabled; }
 	bool IsUnitAnimationStateLogEnabled() const { return bLogUnitAnimationState; }
+	float GetCrowdLocomotionIdleSpeedThreshold() const { return CrowdLocomotionIdleSpeedThreshold; }
 
 	bool IsUnitAlive(FUnitHandle Handle) const;
 	FVector GetUnitPosition(FUnitHandle Handle) const;
@@ -116,6 +117,9 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Debug", DisplayName="Log Unit Animation State")
 	bool bLogUnitAnimationState = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Animation", DisplayName="Locomotion Idle Speed Threshold", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float CrowdLocomotionIdleSpeedThreshold = 0.15f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Visual", DisplayName="Enable Skeletal Visuals")
 	bool bEnableSkeletalVisuals = true;
@@ -300,6 +304,27 @@ private:
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Player Separation Weight", Min=0.0f, Max=20.0f, Speed=0.05f)
 	float PlayerSeparationWeight = 2.0f;
 
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Enable Ally Follow Player")
+	bool bEnableAllyFollowPlayer = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Distance", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float AllyFollowDistance = 3.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Column Spacing", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowColumnSpacing = 1.2f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Row Spacing", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowRowSpacing = 1.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Column Count", Min=1, Max=16, Speed=1)
+	int32 AllyFollowColumnCount = 3;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Arrive Tolerance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowArriveTolerance = 0.5f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Ally Follow", DisplayName="Follow Resume Distance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float AllyFollowResumeDistance = 1.25f;
+
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Melee Combat Slot Count", Min=0, Max=64, Speed=1)
 	int32 MeleeCombatSlotCount = 8;
 
@@ -332,6 +357,48 @@ private:
 
 	UPROPERTY(Edit, Save, Category="Crowd|Player Engagement", DisplayName="Circle Around Radial Correction Weight", Min=0.0f, Max=10.0f, Speed=0.05f)
 	float CircleAroundRadialCorrectionWeight = 0.65f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Enable Chase Blocked Side Step")
+	bool bEnableChaseBlockedSideStep = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Chase Blocked Side Step Speed Scale", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float ChaseBlockedSideStepSpeedScale = 0.65f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Treat Friendly Chase Blockers As Soft")
+	bool bTreatFriendlyChaseBlockersAsSoft = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Friendly Chase Block Score Scale", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float FriendlyChaseBlockScoreScale = 0.25f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Enable Attack Separation")
+	bool bEnableAttackSeparation = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Attack Separation Speed Scale", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float AttackSeparationSpeedScale = 0.35f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Separation Dead Zone", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float SeparationDeadZone = 0.04f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Separation Only Speed Scale", Min=0.0f, Max=5.0f, Speed=0.05f)
+	float SeparationOnlySpeedScale = 0.35f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Enable Separation Velocity Smoothing")
+	bool bEnableSeparationVelocitySmoothing = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Separation Velocity Blend Speed", Min=0.0f, Max=60.0f, Speed=0.5f)
+	float SeparationVelocityBlendSpeed = 10.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Enable Unit Target Distribution")
+	bool bEnableUnitTargetDistribution = true;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Unit Target Soft Capacity", Min=0, Max=64, Speed=1)
+	int32 UnitTargetSoftCapacity = 2;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Unit Target Contest Penalty Distance", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float UnitTargetContestPenaltyDistance = 2.0f;
+
+	UPROPERTY(Edit, Save, Category="Crowd|Unit", DisplayName="Friendly Blocked Retarget Time", Min=0.0f, Max=10.0f, Speed=0.01f)
+	float FriendlyBlockedRetargetTime = 0.45f;
 
 	UPROPERTY(Edit, Save, Category="Crowd|Ground", DisplayName="Surface Following")
 	bool bSurfaceFollowingEnabled = true;

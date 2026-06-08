@@ -345,9 +345,19 @@ FCrowdMovementSettings ULargeScaleUnitManagerComponent::BuildMovementSettings() 
 	Settings.bWaitWhenChaseBlocked = bWaitWhenChaseBlocked;
 	Settings.ChaseBlockedProbeDistance = ChaseBlockedProbeDistance;
 	Settings.ChaseBlockedClearancePadding = ChaseBlockedClearancePadding;
+	Settings.bEnableChaseBlockedSideStep = bEnableChaseBlockedSideStep;
+	Settings.ChaseBlockedSideStepSpeedScale = ChaseBlockedSideStepSpeedScale;
+	Settings.bTreatFriendlyChaseBlockersAsSoft = bTreatFriendlyChaseBlockersAsSoft;
+	Settings.FriendlyChaseBlockScoreScale = FriendlyChaseBlockScoreScale;
 	Settings.CircleAroundSpeedScale = CircleAroundSpeedScale;
 	Settings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
 	Settings.CircleAroundRadialCorrectionWeight = CircleAroundRadialCorrectionWeight;
+	Settings.bEnableAttackSeparation = bEnableAttackSeparation;
+	Settings.AttackSeparationSpeedScale = AttackSeparationSpeedScale;
+	Settings.SeparationDeadZone = SeparationDeadZone;
+	Settings.SeparationOnlySpeedScale = SeparationOnlySpeedScale;
+	Settings.bEnableSeparationVelocitySmoothing = bEnableSeparationVelocitySmoothing;
+	Settings.SeparationVelocityBlendSpeed = SeparationVelocityBlendSpeed;
 	Settings.bEnablePlayerSeparation = bEnablePlayerSeparation;
 	Settings.PlayerSeparationPadding = PlayerSeparationPadding;
 	Settings.PlayerSeparationWeight = PlayerSeparationWeight;
@@ -598,6 +608,7 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	APawn* PlayerPawn = ResolvePlayerPawn();
 	const bool bHasPlayerPawn = PlayerPawn != nullptr;
 	const FVector PlayerLocation = PlayerPawn ? PlayerPawn->GetActorLocation() : FVector::ZeroVector;
+	const FVector PlayerForward = PlayerPawn ? PlayerPawn->GetActorForward() : FVector::ForwardVector;
 	MovementSettings.bHasPlayerSeparationTarget = bHasPlayerPawn;
 	MovementSettings.PlayerSeparationLocation = PlayerLocation;
 	MovementSettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
@@ -615,11 +626,23 @@ void ULargeScaleUnitManagerComponent::TickComponent(float DeltaTime, ELevelTick 
 	FCrowdAISettings AISettings;
 	AISettings.bHasPlayerTarget = bHasPlayerPawn;
 	AISettings.PlayerLocation = PlayerLocation;
+	AISettings.PlayerForward = PlayerForward;
 	AISettings.PlayerProxyRadius = EngagementSettings.PlayerProxyRadius;
 	AISettings.SlotArriveTolerance = EngagementSettings.SlotArriveTolerance;
 	AISettings.CircleAroundRadiusTolerance = CircleAroundRadiusTolerance;
 	AISettings.AttackStateExitHysteresis = AttackStateExitHysteresis;
 	AISettings.CircleAroundStateHysteresis = CircleAroundStateHysteresis;
+	AISettings.bEnableAllyFollowPlayer = bEnableAllyFollowPlayer;
+	AISettings.AllyFollowDistance = AllyFollowDistance;
+	AISettings.AllyFollowColumnSpacing = AllyFollowColumnSpacing;
+	AISettings.AllyFollowRowSpacing = AllyFollowRowSpacing;
+	AISettings.AllyFollowColumnCount = AllyFollowColumnCount;
+	AISettings.AllyFollowArriveTolerance = AllyFollowArriveTolerance;
+	AISettings.AllyFollowResumeDistance = AllyFollowResumeDistance;
+	AISettings.bEnableUnitTargetDistribution = bEnableUnitTargetDistribution;
+	AISettings.UnitTargetSoftCapacity = UnitTargetSoftCapacity;
+	AISettings.UnitTargetContestPenaltyDistance = UnitTargetContestPenaltyDistance;
+	AISettings.FriendlyBlockedRetargetTime = FriendlyBlockedRetargetTime;
 	AIManager.Update(DeltaTime, UnitStore, SpatialPartition, AISettings, [this]()
 	{
 		return RandomThinkInterval();

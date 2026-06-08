@@ -5,14 +5,49 @@
 #include "Mesh/MeshManager.h"
 #include "Collision/Ray/RayUtils.h"
 #include "Core/Logging/Log.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Render/Types/ViewTypes.h"
 #include "Engine/Profiling/Stats/Stats.h"
+
+#include <cstdlib>
+#include <cstring>
 
 HIDE_FROM_COMPONENT_LIST(USkinnedMeshComponent)
 
 namespace
 {
 	constexpr float MatrixDecomposeTolerance = 1.0e-6f;
+
+	int32 ParseMaterialSlotPropertyIndex(const char* PropertyName)
+	{
+		if (!PropertyName)
+		{
+			return -1;
+		}
+
+		if (std::strncmp(PropertyName, "Element ", 8) == 0)
+		{
+			return std::atoi(PropertyName + 8);
+		}
+
+		if (std::strncmp(PropertyName, "Index [", 7) == 0)
+		{
+			return std::atoi(PropertyName + 7);
+		}
+
+		return -1;
+	}
+
+	UMaterialInterface* LoadMaterialInterfaceFromSlotPath(const FString& MaterialPath)
+	{
+		if (MaterialPath.empty() || MaterialPath == "None")
+		{
+			return nullptr;
+		}
+
+		return FMaterialManager::Get().GetOrCreateMaterialInterface(MaterialPath);
+	}
 
 	FTransform MatrixToEditorTransform(const FMatrix& Matrix)
 	{
@@ -1213,8 +1248,10 @@ void USkinnedMeshComponent::RestoreSkeletalMeshFromPath()
 				}
 				else
 				{
-					UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MatPath);
-					SetMaterial(i, LoadedMat);
+					if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(MatPath))
+					{
+						SetMaterial(i, LoadedMat);
+					}
 				}
 			}
 			
@@ -1259,11 +1296,8 @@ void USkinnedMeshComponent::PostEditProperty(const char* PropertyName)
 
 	}
 
-	if (strncmp(PropertyName, "Element ", 8) == 0)
+	if (const int32 Index = ParseMaterialSlotPropertyIndex(PropertyName); Index >= 0)
 	{
-		// "Element 0"에서 8번째 인덱스부터 시작하는 숫자를 정수로 변환한다.
-		int32 Index = atoi(&PropertyName[8]);
-
 		// editor slot path 변경은 geometry와 무관하므로 SetMaterial의 material dirty만 사용한다.
 		if (Index >= 0 && Index < (int32)MaterialSlots.size())
 		{
@@ -1275,8 +1309,7 @@ void USkinnedMeshComponent::PostEditProperty(const char* PropertyName)
 			}
 			else
 			{
-				UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(NewMatPath);
-				if (LoadedMat)
+				if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(NewMatPath))
 				{
 					SetMaterial(Index, LoadedMat);
 				}
@@ -1296,8 +1329,7 @@ void USkinnedMeshComponent::PostEditProperty(const char* PropertyName)
 			}
 			else
 			{
-				UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(NewMatPath);
-				if (LoadedMat)
+				if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(NewMatPath))
 				{
 					SetMaterial(Index, LoadedMat);
 				}

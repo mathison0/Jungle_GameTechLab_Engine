@@ -324,7 +324,10 @@ public:
 	void FlushDirtyBuffers(ID3D11Device* Device, ID3D11DeviceContext* Ctx) override;
 	ID3D11ShaderResourceView* GetSRV(EMaterialTextureSlot Slot) const override;
 
-	EMaterialShadowMode GetShadowMode()  const override { return Parent->GetShadowMode(); }
+	EMaterialShadowMode GetShadowMode() const override
+	{
+		return Parent ? Parent->GetShadowMode() : EMaterialShadowMode::Opaque;
+	}
 	FVector4 GetEmissiveColor() const override;
 	float GetEmissiveIntensity() const override;
 	bool IsBloomEnabled() const override;
@@ -342,6 +345,7 @@ public:
 protected:
 	bool SetParameter(const FString& Name, const void* Data, uint32 Size);
 	void CopyParentConstantBuffers();
+	void CopyOverridesFrom(const UMaterialInstance& Source);
 
 	FString PathFileName;
 	UMaterial* Parent = nullptr;
@@ -377,6 +381,7 @@ public:
 	GENERATED_BODY()
 
 	static UMaterialInstanceDynamic* Create(UMaterial* InParent);
+	static UMaterialInstanceDynamic* Create(UMaterialInstance* SourceInstance);
 	static UMaterialInstanceDynamic* Create(UMaterial* InParent,
 		TMap<FString, std::unique_ptr<FMaterialConstantBuffer>>&& InBuffers);
 

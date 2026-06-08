@@ -7,6 +7,7 @@ namespace
 {
 	constexpr float RadToDeg = 57.295779513082320876f;
 	constexpr float GoldenAngleRadians = 2.39996322972865332f;
+	constexpr float FriendlyBlockedMovingSpeedThresholdSq = 0.01f;
 
 	FVector ToXY(const FVector& V)
 	{
@@ -30,6 +31,18 @@ namespace
 		return FVector(V.X * InvLen, V.Y * InvLen, 0.0f);
 	}
 
+	FVector ClampLengthXY(const FVector& V, float MaxLength)
+	{
+		const float LenSq = LengthSquaredXY(V);
+		const float MaxLen = (std::max)(MaxLength, 0.0f);
+		if (LenSq <= MaxLen * MaxLen || LenSq <= 1.e-6f)
+		{
+			return V;
+		}
+
+		return NormalizedXY(V) * MaxLen;
+	}
+
 	FVector DeterministicUnitDirectionXY(uint32 UnitIndex)
 	{
 		const float Angle = static_cast<float>(UnitIndex) * GoldenAngleRadians;
@@ -41,6 +54,24 @@ namespace
 		const float DX = A.X - B.X;
 		const float DY = A.Y - B.Y;
 		return DX * DX + DY * DY;
+	}
+
+	bool IsSoftFriendlyChaseBlocker(
+		const FCrowdUnit& Unit,
+		const FCrowdUnit& Other,
+		const FCrowdMovementSettings& Settings)
+	{
+		return Settings.bTreatFriendlyChaseBlockersAsSoft && Unit.Team == Other.Team;
+	}
+
+	float ChaseBlockOccupancyWeight(
+		const FCrowdUnit& Unit,
+		const FCrowdUnit& Other,
+		const FCrowdMovementSettings& Settings)
+	{
+		return IsSoftFriendlyChaseBlocker(Unit, Other, Settings)
+			? (std::max)(Settings.FriendlyChaseBlockScoreScale, 0.0f)
+			: 1.0f;
 	}
 
 	FRotator RotationFromDirectionXY(const FVector& Direction)
@@ -155,6 +186,7 @@ void FCrowdMovementManager::Update(
 		if (Unit.State == EUnitState::Dead)
 		{
 			Unit.Velocity = FVector::ZeroVector;
+			Unit.FriendlyBlockedTime = 0.0f;
 
 			// 공중 사망 시체 낙하 — 저글 킬이 공중에 떠 있지 않게 착지까지 떨어뜨린다.
 			if (Unit.bAirborne)
@@ -173,6 +205,7 @@ void FCrowdMovementManager::Update(
 
 		if (Unit.State == EUnitState::Hit || Unit.State == EUnitState::KnockDown)
 		{
+			Unit.FriendlyBlockedTime = 0.0f;
 			const float KnockbackStep = (std::min)(UnitDeltaTime, (std::max)(Unit.KnockbackTimeRemaining, 0.0f));
 			if (KnockbackStep > 0.0f && LengthSquaredXY(Unit.KnockbackVelocity) > 1.e-6f)
 			{
@@ -201,6 +234,7 @@ void FCrowdMovementManager::Update(
 		FVector Desired = FVector::ZeroVector;
 		FVector FacingDir = FVector::ZeroVector;
 		float MoveSpeedScale = 1.0f;
+		bool bFriendlyBlockAhead = false;
 		if (Unit.TargetKind == ECrowdTargetKind::Player)
 		{
 			FacingDir = NormalizedXY(Unit.LookAtLocation - Unit.Position);
@@ -301,6 +335,7 @@ void FCrowdMovementManager::Update(
 				const float DistSq = LengthSquaredXY(Away);
 				if (DistSq <= 1.e-6f)
 				{
+					Separation += DeterministicUnitDirectionXY(Index);
 					continue;
 				}
 
@@ -369,7 +404,8 @@ void FCrowdMovementManager::Update(
 				const FVector ProbePosition = Unit.Position + Desired * ProbeDistance;
 				const float ProbeQueryRadius = (std::max)(Unit.Radius + MaxAliveRadius + ClearancePadding, 0.0f);
 
-				bool bBlockedByForwardOccupancy = false;
+				float ForwardHardOccupancyScore = 0.0f;
+				float ForwardSoftOccupancyScore = 0.0f;
 				SpatialPartition.QueryUnitsInRadius(Units, ProbePosition, ProbeQueryRadius, Neighbors);
 				for (uint32 OtherIndex : Neighbors)
 				{
@@ -387,27 +423,131 @@ void FCrowdMovementManager::Update(
 					const float BlockedRadius = Unit.Radius + Other.Radius + ClearancePadding;
 					if (BlockedRadius > 0.0f && DistanceSquaredXY(ProbePosition, Other.Position) <= BlockedRadius * BlockedRadius)
 					{
-						bBlockedByForwardOccupancy = true;
-						break;
+						const float BlockedRadiusSq = BlockedRadius * BlockedRadius;
+						const float DistSq = DistanceSquaredXY(ProbePosition, Other.Position);
+						const float Occupancy = (BlockedRadiusSq - DistSq) / BlockedRadiusSq;
+						if (IsSoftFriendlyChaseBlocker(Unit, Other, Settings))
+						{
+							const float FriendlyWeight = ChaseBlockOccupancyWeight(Unit, Other, Settings);
+							if (FriendlyWeight > 0.0f)
+							{
+								ForwardSoftOccupancyScore += Occupancy * FriendlyWeight;
+								bFriendlyBlockAhead = true;
+							}
+						}
+						else
+						{
+							ForwardHardOccupancyScore += Occupancy;
+						}
 					}
 				}
 
-				if (bBlockedByForwardOccupancy)
+				const float ForwardOccupancyScore = ForwardHardOccupancyScore + ForwardSoftOccupancyScore;
+				if (ForwardOccupancyScore > 0.0f)
 				{
-					Unit.Velocity = FVector::ZeroVector;
-					ApplySurfaceFollowing(Unit, GroundQuery, Settings);
-					continue;
+					bool bHasSideStep = false;
+					FVector SideStepDirection = FVector::ZeroVector;
+					float BestSideStepScore = ForwardOccupancyScore;
+
+					if (Settings.bEnableChaseBlockedSideStep)
+					{
+						auto EvaluateSideStep = [&](const FVector& CandidateDirection)
+						{
+							if (LengthSquaredXY(CandidateDirection) <= 1.e-6f)
+							{
+								return;
+							}
+
+							const FVector CandidatePosition = Unit.Position + CandidateDirection * ProbeDistance;
+							float CandidateScore = 0.0f;
+							SpatialPartition.QueryUnitsInRadius(Units, CandidatePosition, ProbeQueryRadius, Neighbors);
+							for (uint32 OtherIndex : Neighbors)
+							{
+								if (OtherIndex == Index || OtherIndex >= Units.size())
+								{
+									continue;
+								}
+
+								const FCrowdUnit& Other = Units[OtherIndex];
+								if (!IsCrowdUnitCombatActive(Other))
+								{
+									continue;
+								}
+
+								const float BlockedRadius = Unit.Radius + Other.Radius + ClearancePadding;
+								const float BlockedRadiusSq = BlockedRadius * BlockedRadius;
+								if (BlockedRadiusSq <= 0.0f)
+								{
+									continue;
+								}
+
+								const float DistSq = DistanceSquaredXY(CandidatePosition, Other.Position);
+								if (DistSq <= BlockedRadiusSq)
+								{
+									const float Occupancy = (BlockedRadiusSq - DistSq) / BlockedRadiusSq;
+									CandidateScore += Occupancy * ChaseBlockOccupancyWeight(Unit, Other, Settings);
+								}
+							}
+
+							if (CandidateScore < BestSideStepScore)
+							{
+								BestSideStepScore = CandidateScore;
+								SideStepDirection = CandidateDirection;
+								bHasSideStep = true;
+							}
+						};
+
+						const FVector Right(-Desired.Y, Desired.X, 0.0f);
+						EvaluateSideStep(Right);
+						EvaluateSideStep(Right * -1.0f);
+					}
+
+					if (!bHasSideStep)
+					{
+						if (ForwardHardOccupancyScore > 0.0f)
+						{
+							Unit.Velocity = FVector::ZeroVector;
+							Unit.FriendlyBlockedTime = 0.0f;
+							ApplySurfaceFollowing(Unit, GroundQuery, Settings);
+							continue;
+						}
+					}
+					else
+					{
+						Desired = SideStepDirection;
+						MoveSpeedScale *= (std::max)(Settings.ChaseBlockedSideStepSpeedScale, 0.0f);
+					}
 				}
 			}
 		}
 
-		const bool bHasPlayerSeparation = LengthSquaredXY(PlayerSeparation) > 1.e-6f;
+		const float SeparationDeadZone = (std::max)(Settings.SeparationDeadZone, 0.0f);
+		const bool bHasUnitSeparation = LengthSquaredXY(Separation) > SeparationDeadZone * SeparationDeadZone;
+		const bool bHasPlayerSeparation = LengthSquaredXY(PlayerSeparation) > SeparationDeadZone * SeparationDeadZone;
+		const bool bHasSeparationInfluence = bHasUnitSeparation || bHasPlayerSeparation;
+		const bool bHasIntentionalMove = Unit.State != EUnitState::Attack && LengthSquaredXY(Desired) > 1.e-6f;
 		FVector MoveDir = Desired;
 		if (Unit.State == EUnitState::Attack)
 		{
-			MoveDir = bHasPlayerSeparation ? PlayerSeparation * Settings.PlayerSeparationWeight : FVector::ZeroVector;
+			if (Settings.bEnableAttackSeparation)
+			{
+				MoveDir = FVector::ZeroVector;
+				if (bHasUnitSeparation)
+				{
+					MoveDir += NormalizedXY(Separation) * Archetype.SeparationWeight;
+				}
+				if (bHasPlayerSeparation)
+				{
+					MoveDir += PlayerSeparation * Settings.PlayerSeparationWeight;
+				}
+				MoveSpeedScale *= (std::max)(Settings.AttackSeparationSpeedScale, 0.0f);
+			}
+			else
+			{
+				MoveDir = bHasPlayerSeparation ? PlayerSeparation * Settings.PlayerSeparationWeight : FVector::ZeroVector;
+			}
 		}
-		else if (LengthSquaredXY(Separation) > 1.e-6f)
+		else if (bHasUnitSeparation)
 		{
 			MoveDir += NormalizedXY(Separation) * Archetype.SeparationWeight;
 		}
@@ -420,11 +560,47 @@ void FCrowdMovementManager::Update(
 		if (LengthSquaredXY(MoveDir) <= 1.e-6f)
 		{
 			Unit.Velocity = FVector::ZeroVector;
+			if (Unit.State == EUnitState::Chase && bFriendlyBlockAhead)
+			{
+				Unit.FriendlyBlockedTime += UnitDeltaTime;
+			}
+			else
+			{
+				Unit.FriendlyBlockedTime = 0.0f;
+			}
 			ApplySurfaceFollowing(Unit, GroundQuery, Settings);
 			continue;
 		}
 
-		Unit.Velocity = MoveDir * Archetype.MoveSpeed * MoveSpeedScale;
+		if (Unit.State != EUnitState::Attack && !bHasIntentionalMove && bHasSeparationInfluence)
+		{
+			MoveSpeedScale *= (std::max)(Settings.SeparationOnlySpeedScale, 0.0f);
+		}
+
+		FVector TargetVelocity = MoveDir * Archetype.MoveSpeed * MoveSpeedScale;
+		if (Settings.bEnableSeparationVelocitySmoothing && bHasSeparationInfluence)
+		{
+			const float BlendSpeed = (std::max)(Settings.SeparationVelocityBlendSpeed, 0.0f);
+			const float BlendAlpha = BlendSpeed > 0.0f
+				? (std::min)(BlendSpeed * UnitDeltaTime, 1.0f)
+				: 1.0f;
+			const FVector SmoothedVelocity = Unit.Velocity + (TargetVelocity - Unit.Velocity) * BlendAlpha;
+			Unit.Velocity = ClampLengthXY(SmoothedVelocity, std::sqrt(LengthSquaredXY(TargetVelocity)));
+		}
+		else
+		{
+			Unit.Velocity = TargetVelocity;
+		}
+		if (Unit.State == EUnitState::Chase
+			&& bFriendlyBlockAhead
+			&& LengthSquaredXY(Unit.Velocity) <= FriendlyBlockedMovingSpeedThresholdSq)
+		{
+			Unit.FriendlyBlockedTime += UnitDeltaTime;
+		}
+		else
+		{
+			Unit.FriendlyBlockedTime = 0.0f;
+		}
 		Unit.Position += Unit.Velocity * UnitDeltaTime;
 		ApplySurfaceFollowing(Unit, GroundQuery, Settings);
 	}

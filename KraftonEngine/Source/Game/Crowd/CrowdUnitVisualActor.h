@@ -39,6 +39,7 @@ public:
 	const FVector& GetCrowdVelocity() const { return Velocity; }
 	float GetCrowdCircleAroundDirectionSign() const { return CircleAroundDirectionSign; }
 	float GetCrowdAnimTime() const { return AnimTime; }
+	float GetCrowdLocomotionIdleSpeedThreshold() const;
 	bool IsCrowdKnockDownGettingUp() const { return bKnockDownGettingUp; }
 	bool ShouldLogCrowdAnimationState() const;
 

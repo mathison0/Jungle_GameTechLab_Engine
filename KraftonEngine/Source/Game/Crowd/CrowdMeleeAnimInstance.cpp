@@ -311,6 +311,20 @@ namespace
 			return bUseRun ? CrowdMeleeRunForwardState : CrowdMeleeWalkForwardState;
 		}
 	}
+
+	bool HasLocomotionSpeed(const UCrowdUnitAnimInstance& AnimInstance)
+	{
+		const float IdleSpeedThreshold = (std::max)(AnimInstance.GetCrowdLocomotionIdleSpeedThreshold(), 0.0f);
+		return AnimInstance.GetCrowdSpeed() > IdleSpeedThreshold;
+	}
+
+	bool ShouldUseRunForSpeed(const UCrowdUnitAnimInstance& AnimInstance, FName CurrentStateName)
+	{
+		const bool bWasRun = IsRunMeleeState(CurrentStateName);
+		return bWasRun
+			? AnimInstance.GetCrowdSpeed() >= CrowdMeleeAnimRunExitSpeed
+			: AnimInstance.GetCrowdSpeed() >= CrowdMeleeAnimRunEnterSpeed;
+	}
 }
 
 UCrowdMeleeAnimInstance::UCrowdMeleeAnimInstance()
@@ -437,28 +451,37 @@ FName UCrowdMeleeAnimInstance::ComputeDesiredMeleeStateName() const
 	case EUnitState::Attack:
 		return CrowdMeleeAttackState;
 	case EUnitState::Chase:
+	{
+		if (!HasLocomotionSpeed(*this))
+		{
+			return CrowdMeleeIdleState;
+		}
+
 		return StateFromDirection(
 			SelectStableForwardBackwardDirection(GetCrowdMoveForwardAmount(), StableMeleeStateName),
-			true);
+			ShouldUseRunForSpeed(*this, StableMeleeStateName));
+	}
 	case EUnitState::CircleAround:
 	{
-		const bool bWasRun = IsRunMeleeState(StableMeleeStateName);
-		const bool bUseRun = bWasRun
-			? GetCrowdSpeed() >= CrowdMeleeAnimRunExitSpeed
-			: GetCrowdSpeed() >= CrowdMeleeAnimRunEnterSpeed;
+		if (!HasLocomotionSpeed(*this))
+		{
+			return CrowdMeleeIdleState;
+		}
+
 		return StateFromDirection(
 			SelectStableDirection(GetCrowdMoveForwardAmount(), GetCrowdMoveRightAmount(), StableMeleeStateName),
-			bUseRun);
+			ShouldUseRunForSpeed(*this, StableMeleeStateName));
 	}
 	case EUnitState::Move:
 	{
-		const bool bWasRun = IsRunMeleeState(StableMeleeStateName);
-		const bool bUseRun = bWasRun
-			? GetCrowdSpeed() >= CrowdMeleeAnimRunExitSpeed
-			: GetCrowdSpeed() >= CrowdMeleeAnimRunEnterSpeed;
+		if (!HasLocomotionSpeed(*this))
+		{
+			return CrowdMeleeIdleState;
+		}
+
 		return StateFromDirection(
 			SelectStableForwardBackwardDirection(GetCrowdMoveForwardAmount(), StableMeleeStateName),
-			bUseRun);
+			ShouldUseRunForSpeed(*this, StableMeleeStateName));
 	}
 	case EUnitState::Idle:
 	default:

@@ -7,11 +7,49 @@
 #include "Collision/Ray/RayUtils.h"
 #include "Mesh/Static/StaticMeshAsset.h"
 #include "Engine/Runtime/Engine.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Render/Shader/ShaderManager.h"
 #include "Texture/Texture2D.h"
 #include "Render/Proxy/StaticMeshSceneProxy.h"
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Serialization/Archive.h"
+
+#include <cstdlib>
+#include <cstring>
+
+namespace
+{
+	int32 ParseMaterialSlotPropertyIndex(const char* PropertyName)
+	{
+		if (!PropertyName)
+		{
+			return -1;
+		}
+
+		if (std::strncmp(PropertyName, "Element ", 8) == 0)
+		{
+			return std::atoi(PropertyName + 8);
+		}
+
+		if (std::strncmp(PropertyName, "Index [", 7) == 0)
+		{
+			return std::atoi(PropertyName + 7);
+		}
+
+		return -1;
+	}
+
+	UMaterialInterface* LoadMaterialInterfaceFromSlotPath(const FString& MaterialPath)
+	{
+		if (MaterialPath.empty() || MaterialPath == "None")
+		{
+			return nullptr;
+		}
+
+		return FMaterialManager::Get().GetOrCreateMaterialInterface(MaterialPath);
+	}
+}
 
 FPrimitiveSceneProxy* UStaticMeshComponent::CreateSceneProxy()
 {
@@ -243,8 +281,10 @@ void UStaticMeshComponent::RestoreStaticMeshFromPath()
 				}
 				else
 				{
-					UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MatPath);
-					OverrideMaterials[i] = LoadedMat;
+					if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(MatPath))
+					{
+						OverrideMaterials[i] = LoadedMat;
+					}
 				}
 			}
 		}
@@ -287,11 +327,8 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 		MarkWorldBoundsDirty();
 	}
 
-	if (strncmp(PropertyName, "Element ", 8) == 0)
+	if (const int32 Index = ParseMaterialSlotPropertyIndex(PropertyName); Index >= 0)
 	{
-		// "Element 0"에서 8번째 인덱스부터 시작하는 숫자를 정수로 변환
-		int32 Index = atoi(&PropertyName[8]);
-
 		// 인덱스 범위 유효성 검사
 		if (Index >= 0 && Index < (int32)MaterialSlots.size())
 		{
@@ -303,8 +340,7 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 			}
 			else
 			{
-				UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(NewMatPath);
-				if (LoadedMat)
+				if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(NewMatPath))
 				{
 					SetMaterial(Index, LoadedMat);
 				}
@@ -323,8 +359,7 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 			}
 			else
 			{
-				UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(NewMatPath);
-				if (LoadedMat)
+				if (UMaterialInterface* LoadedMat = LoadMaterialInterfaceFromSlotPath(NewMatPath))
 				{
 					SetMaterial(Index, LoadedMat);
 				}

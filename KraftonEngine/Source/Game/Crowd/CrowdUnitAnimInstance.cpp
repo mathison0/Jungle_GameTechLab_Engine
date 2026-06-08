@@ -28,6 +28,7 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	LastCrowdLOD = ECrowdUnitLOD::Full;
 	CircleAroundDirectionSign = 1.0f;
 	AnimTime = 0.0f;
+	LocomotionIdleSpeedThreshold = 0.15f;
 	bKnockDownGettingUp = false;
 
 	USkeletalMeshComponent* MeshComp = GetOwningComponent();
@@ -42,6 +43,7 @@ void UCrowdUnitAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	LastCrowdLOD = VisualActor->GetCrowdLOD();
 	CircleAroundDirectionSign = VisualActor->GetCrowdCircleAroundDirectionSign();
 	AnimTime = VisualActor->GetCrowdAnimTime();
+	LocomotionIdleSpeedThreshold = VisualActor->GetCrowdLocomotionIdleSpeedThreshold();
 	bKnockDownGettingUp = VisualActor->IsCrowdKnockDownGettingUp();
 	if (IsCrowdUnitMovingState(LastCrowdState))
 	{
