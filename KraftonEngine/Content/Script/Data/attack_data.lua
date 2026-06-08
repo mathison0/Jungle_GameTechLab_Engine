@@ -183,14 +183,14 @@ return {
                           blend_in = 0.15, attack_id = "jump_attack", hit_frac = 0.45 },
 
         -- 공중 체인 1/2타 — 제자리 휘두르기 (RM 없음, 행 타임 동안 천천히 낙하하며 연계)
-        air_slash1    = { montage = montage("great sword slash (5)_mixamo_com"),
-                          sequence = seq("great sword slash (5)_mixamo_com"),
+        air_slash1    = { montage = montage("Barbarian_Melee Attack Downward"),
+                          sequence = seq("Barbarian_Melee Attack Downward"),
                           blend_in = 0.1, attack_id = "air1", hit_frac = 0.40, window = { 0.50, 0.85 },
-                          play_rate = { 1.05, 1.15 } },
-        air_slash2    = { montage = montage("great sword attack_mixamo_com"),
-                          sequence = seq("great sword attack_mixamo_com"),
+                          play_rate = { 1.95, 2.15 } },
+        air_slash2    = { montage = montage("Barbarian_Melee Attack Horizontal"),
+                          sequence = seq("Barbarian_Melee Attack Horizontal"),
                           blend_in = 0.1, attack_id = "air2", hit_frac = 0.40, window = { 0.50, 0.85 },
-                          play_rate = { 1.05, 1.15 } },
+                          play_rate = { 1.95, 2.15 } },
 
         -- 강공격
         backhand      = { montage = montage("Barbarian_Melee Attack Backhand"), blend_in = 0.2 },
@@ -239,10 +239,10 @@ return {
         -- 플레이어 피격 리액션 — 좌/우 휘청 (공격 아님). 빠르게 재생해 후딜 최소화
         react_left    = { montage = montage("Barbarian_React Large From Left"),
                           sequence = seq("Barbarian_React Large From Left"),
-                          blend_in = 0.08, play_rate = { 1.2, 1.3 } },
+                          blend_in = 0.08, play_rate = { 1.7, 1.9 } },
         react_right   = { montage = montage("Barbarian_React Large From Right"),
                           sequence = seq("Barbarian_React Large From Right"),
-                          blend_in = 0.08, play_rate = { 1.2, 1.3 } },
+                          blend_in = 0.08, play_rate = { 1.7, 1.9 } },
 
         -- 발도/납도 (X) — 등 뒤로 뽑기/넣기. 본 스왑 시점은 feedback.weapon.swap_frac
         equip         = { montage = montage("Barbarian_Equip Over Shoulder"),
@@ -258,7 +258,8 @@ return {
         -- 1/2단은 변주 배열 — 매 콤보 랜덤 (직전 모션 반복 회피). 3단 피니셔는 고정이 연출상 안정적.
         light = {
             -- 전 단수 변주 풀 (2/3단은 idle/moving 공용) — 직전 모션 반복 회피는 C++ 처리
-            idle   = { { "ss_slash", "ss_slash5", "gs_slash" },
+            --idle   = { { "ss_slash", "ss_slash5", "gs_slash" },
+            idle   = { { "ss_slash5", "gs_slash" },
                        { "gs_slash4", "ss_slash3", "ss_atk2", "ss_atk3", "gs_slash3", "inward_slash" },
                        { "combo_v3", "combo_v1", "combo_v2", "ss_slash4", "ss_slash2", "gs_slash2" } },
             moving = { { "slide", "ss_lunge" },
@@ -315,7 +316,7 @@ return {
 
         -- 무쌍 게이지 — 이 킬 수를 채우면 무쌍기(R) 발동 가능
         ultimate = {
-            kills_to_fill = 10,
+            kills_to_fill = 15,
         },
 
         -- 플레이어 피격 리액션 — 최소 간격 (초). 군체 다단 히트 스턴락 방지
