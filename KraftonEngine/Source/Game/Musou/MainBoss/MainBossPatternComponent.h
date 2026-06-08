@@ -46,6 +46,9 @@ public:
 	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Battlecry Sequence", AssetType="UAnimSequence")
 	FString BattlecrySequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Battlecry_mixamo_com.uasset";
 
+	UPROPERTY(Edit, Save, Category="Main Boss|Animation", DisplayName="Death Sequence", AssetType="UAnimSequence")
+	FString DeathSequencePath = "Content/Data/GameJam/Golem_Boss/Golem_Boss_Death_mixamo_com.uasset";
+
 	UPROPERTY(Edit, Save, Category="Main Boss|Encounter", DisplayName="Start Dormant")
 	bool bStartDormant = false;
 
@@ -102,6 +105,9 @@ private:
 	void EnterExecute(const FMainBossPattern& Pattern, int32 StepIndex, APawn* Target);
 	void EnterRecovery();
 	void EnterBattlecry(APawn* Target);
+	void EnterDead();
+	void TickDead(float DeltaTime);
+	void StartDeathOutro();
 	void AdvanceAfterStep(APawn* Target);
 
 	void PlayIdleIfNeeded();
@@ -122,6 +128,7 @@ private:
 	bool bDormant = false;
 	bool bEncounterCinematic = false;
 	bool bPatternEnabled = true;
+	bool bDeathOutroStarted = false;
 	uint32 RandomState = 0x2468ace1u;
 	FString CurrentSequencePath;
 };

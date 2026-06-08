@@ -98,9 +98,25 @@ void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 {
 	UActorComponent::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	const float SafeDeltaTime = (std::max)(DeltaTime, 0.0f);
+
 	if (bDormant || bEncounterCinematic)
 	{
 		ResetThrowAim();
+		return;
+	}
+
+	UBattleComponent* Battle = ResolveBattleComponent();
+	if (Battle && Battle->IsDead())
+	{
+		if (State != EMainBossPatternState::Dead)
+		{
+			EnterDead();
+		}
+		else
+		{
+			TickDead(SafeDeltaTime);
+		}
 		return;
 	}
 
@@ -111,15 +127,7 @@ void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	TickCooldowns(DeltaTime);
-
-	UBattleComponent* Battle = ResolveBattleComponent();
-	if (Battle && Battle->IsDead())
-	{
-		ResetThrowAim();
-		State = EMainBossPatternState::Dead;
-		return;
-	}
+	TickCooldowns(SafeDeltaTime);
 
 	UpdatePhaseTransition(Battle);
 
@@ -131,7 +139,7 @@ void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	StateTime += (std::max)(DeltaTime, 0.0f);
+	StateTime += SafeDeltaTime;
 
 	switch (State)
 	{
@@ -161,13 +169,13 @@ void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 			{
 				EnterChase(*Pattern, 0);
 				PlayChaseIfNeeded();
-				MoveTowardTarget(Target, DeltaTime, FirstStep->MaxRange);
+				MoveTowardTarget(Target, SafeDeltaTime, FirstStep->MaxRange);
 			}
 			break;
 		}
 
 		PlayChaseIfNeeded();
-		MoveTowardTarget(Target, DeltaTime, 5.0f);
+		MoveTowardTarget(Target, SafeDeltaTime, 5.0f);
 		break;
 	}
 	case EMainBossPatternState::Chase:
@@ -200,11 +208,11 @@ void UMainBossPatternComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		}
 
 		PlayChaseIfNeeded();
-		MoveTowardTarget(Target, DeltaTime, Step->MaxRange);
+		MoveTowardTarget(Target, SafeDeltaTime, Step->MaxRange);
 		break;
 	}
 	case EMainBossPatternState::Execute:
-		TickThrowAim(DeltaTime, Target);
+		TickThrowAim(SafeDeltaTime, Target);
 		if (!CurrentPattern || !GetCurrentStep() || StateTime >= ActiveExecutionTime)
 		{
 			AdvanceAfterStep(Target);
@@ -841,6 +849,61 @@ void UMainBossPatternComponent::EnterBattlecry(APawn* Target)
 	FaceTarget(Target);
 	UAnimSequence* Sequence = PlaySequencePath(BattlecrySequencePath, false, 1.0f, true);
 	ActiveExecutionTime = Sequence ? (std::max)(Sequence->GetPlayLength(), 0.2f) : 1.0f;
+}
+
+void UMainBossPatternComponent::EnterDead()
+{
+	ResetThrowAim();
+	CurrentPattern = nullptr;
+	CurrentStepIndex = 0;
+	State = EMainBossPatternState::Dead;
+	StateTime = 0.0f;
+	ActiveExecutionTime = 0.0f;
+	bPatternEnabled = false;
+	bPhase2Pending = false;
+	bDeathOutroStarted = false;
+
+	if (AActor* Owner = GetOwner())
+	{
+		if (UCharacterMovementComponent* Movement = Owner->GetComponentByClass<UCharacterMovementComponent>())
+		{
+			Movement->SetVelocity(FVector(0.0f, 0.0f, 0.0f));
+			Movement->SetGravityScale(1.0f);
+		}
+	}
+
+	UAnimSequence* Sequence = PlaySequencePath(DeathSequencePath, false, 1.0f, true);
+	ActiveExecutionTime = Sequence ? (std::max)(Sequence->GetPlayLength(), 0.2f) : 0.2f;
+	if (!Sequence && bDebugLog)
+	{
+		UE_LOG("[MainBoss] death animation load failed: %s", DeathSequencePath.c_str());
+	}
+}
+
+void UMainBossPatternComponent::TickDead(float DeltaTime)
+{
+	StateTime += (std::max)(DeltaTime, 0.0f);
+	if (!bDeathOutroStarted && StateTime >= ActiveExecutionTime)
+	{
+		StartDeathOutro();
+	}
+}
+
+void UMainBossPatternComponent::StartDeathOutro()
+{
+	if (bDeathOutroStarted)
+	{
+		return;
+	}
+
+	bDeathOutroStarted = true;
+
+	UWorld* World = GetWorld();
+	AMusouGameMode* GameMode = World ? Cast<AMusouGameMode>(World->GetGameMode()) : nullptr;
+	if (GameMode)
+	{
+		GameMode->NotifyVictory();
+	}
 }
 
 void UMainBossPatternComponent::AdvanceAfterStep(APawn* Target)
