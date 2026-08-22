@@ -34,3 +34,4 @@ Saved/
 # Misc
 node_modules/
 *.log
+.tools/tmp/

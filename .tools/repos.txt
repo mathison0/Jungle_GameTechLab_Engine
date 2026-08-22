@@ -1,26 +1,18 @@
 # 주차별 원본 레포지토리 목록
-# 형식:  <주차2자리>  <레포 URL>  [브랜치]
-#  - 브랜치를 비워두면 원격의 기본 브랜치를 자동으로 찾습니다.
-#  - '#'로 시작하는 줄과 빈 줄은 무시됩니다.
-#  - 아직 URL을 모르는 주차는 그냥 지우거나 주석 처리해 두세요. 나중에 다시 실행하면 됩니다.
-#
-# 예시:
-# 01  https://github.com/username/week01-project.git
-# 03  https://github.com/some-team/dino-engine.git  develop
-
-01  
-02  
-03  
-04  
-05  
-05-plus  
-06  
-07  
-08  
-09  
-09-plus  
-10  
-11  
-12  
-13  
-14  
+# 형식:  <주차>  <레포 URL>  [브랜치]   (브랜치 생략 시 기본 브랜치 자동 탐지)
+01       https://github.com/chodott/Techlap_1week.git
+02       https://github.com/UltraSion/cpp-gametechlab-project-w02.git
+03       https://github.com/HaXX0rBunny/Week3_Team5_DinoEngine.git
+04       https://github.com/shimwoojin/Jungle_Week4_Team3.git
+05       https://github.com/DDing-Ho/W05_Team8.git
+05-plus  https://github.com/CaptainTangerine/KraftonJungle3_Week5Plus_Team8.git
+06       https://github.com/mathison0/KraftonJungle_Week6_Team8.git
+07       https://github.com/DKael/KraftonJungle_Week7_Team7.git
+08       https://github.com/UltraSion/Jungle_week8_Team3.git
+09       https://github.com/alogeclock/Jungle_Week9_Team1.git
+09-plus  https://github.com/kim-kihoon/Jungle_Week9Plus_Team1.git
+10       https://github.com/MozziDog/Jungle_Week10_Team6.git
+11       https://github.com/alogeclock/Jungle_Week11_Team8.git
+12       https://github.com/mathison0/Jungle_Week12_Team3.git
+13       https://github.com/mathison0/Jungle_Week13_Team1.git
+14       https://github.com/puter2712git/Jungle_Week14_Team2.git
