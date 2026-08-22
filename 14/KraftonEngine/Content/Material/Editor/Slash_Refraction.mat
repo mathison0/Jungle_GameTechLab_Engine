@@ -1,0 +1,34 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "DepthReadOnly",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "Editor",
+  "Parameters" : {
+    "RefractionDirection" : null,
+    "RefractionEdgeBoost" : 0.000000,
+    "RefractionNoiseScroll" : 0.000000,
+    "RefractionNoiseTiling" : 0.000000,
+    "RefractionPad0" : 0.000000,
+    "RefractionStrength" : 0.000000,
+    "SlashAlpha" : 0.000000,
+    "SlashEdgeSoftness" : 0.000000,
+    "SlashRefractionPad" : null,
+    "SlashReveal" : 0.000000,
+    "SlashRevealSoftness" : 0.000000,
+    "SlashScreenThickness" : 0.000000,
+    "SlashScreenThicknessStrength" : 0.000000,
+    "SlashTailFadeStart" : 0.000000,
+    "SlashTrailLength" : 0.000000
+  },
+  "PathFileName" : "Content/Material/Editor/Slash_Refraction.mat",
+  "RasterizerState" : "SolidNoCull",
+  "RenderPass" : "Refraction",
+  "ShaderPath" : "Shaders/Geometry/Slash_Refraction.hlsl",
+  "ShadowMode" : "None",
+  "Textures" : {
+    "Custom0Texture" : "Content/Texture/noise.png",
+    "DiffuseTexture" : "Content/Texture/Slash.png"
+  },
+  "bEnableBloom" : false
+}

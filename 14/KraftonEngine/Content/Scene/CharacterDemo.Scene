@@ -1,0 +1,997 @@
+{
+  "Actors" : [{
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_0",
+      "NonSceneComponents" : [],
+      "ObjectId" : 2,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, 0.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_1",
+        "ObjectId" : 3,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 3,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Werewolf.mat", "Content/Material/Auto/M_Werewolf_1.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Werewolf/SK_Werewolf_Full_01_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_1",
+      "NonSceneComponents" : [],
+      "ObjectId" : 4,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, 3.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 5,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UAnimSingleNodeInstance",
+            "Properties" : {
+              "RootMotionMode" : 1
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "Content/Data/GameJam/Barbarian/Barbarian_Idle.uasset",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 1,
+          "AnimationTickLOD" : 3,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Barbarian_Body_01.mat", "Content/Material/Auto/M_Barbarian_Armors.mat", "Content/Material/Auto/M_Hair.mat", "Content/Material/Auto/M_Barbarian_Cloth.mat", "Content/Material/Auto/M_Wool.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, 3.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Barbarian/Barbarian_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ADirectionalLightActor",
+      "Name" : "ADirectionalLightActor_10",
+      "NonSceneComponents" : [],
+      "ObjectId" : 6,
+      "Properties" : {
+        "PendingActorLocation" : [-5.327134, -2.806443, 2.986512],
+        "PendingActorRotation" : [45.000004, -45.000004, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_132",
+            "ObjectId" : 8,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_124",
+            "ObjectId" : 9,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_126",
+            "ObjectId" : 10,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_127",
+            "ObjectId" : 11,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }, {
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Name" : "UBillboardComponent_133",
+            "ObjectId" : 12,
+            "Properties" : {
+              "AngularDamping" : 0.010000,
+              "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+              "CollisionEnabled" : 0,
+              "CollisionPreset" : 0,
+              "LinearDamping" : 0.010000,
+              "Mass" : 1.000000,
+              "MaterialSlot" : "Content/Material/Editor/DirectionalLight.mat",
+              "ObjectType" : 0,
+              "RelativeTransform.Location" : [0.000000, 0.000000, 0.000000],
+              "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+              "ResponseContainer" : {
+                "Responses[0]" : 2,
+                "Responses[1]" : 2,
+                "Responses[2]" : 2,
+                "Responses[3]" : 2,
+                "Responses[4]" : 2
+              },
+              "TranslucentSortPriority" : 0,
+              "bAutoActivate" : true,
+              "bCastShadow" : true,
+              "bCastShadowAsTwoSided" : false,
+              "bEditorOnly" : true,
+              "bEnableGravity" : true,
+              "bGenerateOverlapEvents" : false,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bIsBillboard" : true,
+              "bIsVisible" : true,
+              "bSimulatePhysics" : false,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "UDirectionalLightComponent",
+        "Name" : "UDirectionalLightComponent_10",
+        "ObjectId" : 7,
+        "Properties" : {
+          "CachedEditRotator" : [45.000000, -45.000000, 0.000000],
+          "Intensity" : 1.000000,
+          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "RelativeTransform.Location" : [-5.327134, -2.806443, 2.986512],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ShadowBias" : -0.000100,
+          "ShadowNormalBias" : -0.002000,
+          "ShadowResolutionScale" : 1.000000,
+          "ShadowSharpen" : 0.670000,
+          "ShadowSlopeBias" : 0.000100,
+          "bAutoActivate" : true,
+          "bCastShadows" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true,
+          "bVisible" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2",
+      "NonSceneComponents" : [],
+      "ObjectId" : 13,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -3.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 14,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 2,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Dwarf.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -3.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Dwarf/SK_Dwarf_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 15,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -6.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 16,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 1,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Golem.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -6.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Golem/SK_Golem_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2_Copy_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 17,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -9.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 18,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 2,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Knight_Armors_Weapon.mat", "Content/Material/Auto/M_Knight_Body.mat", "Content/Material/Auto/M_Knight_Body_2.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -9.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Knight/SK_Knight_Full_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2_Copy_Copy_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 19,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -12.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 20,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 2,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Orc_Hummer.mat", "Content/Material/Auto/M_Orc_Hummer_1.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -12.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Orc_Hummer/SK_Orc_Hummer_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2_Copy_Copy_Copy_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 21,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -15.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 22,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 2,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Ulf.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -15.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Ulf/SK_Ulf_Full_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_1_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 23,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, 6.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 24,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 3,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Warriror.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, 6.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Warrior/SK_Warrior_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_1_Copy_Copy",
+      "NonSceneComponents" : [],
+      "ObjectId" : 25,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, 9.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 26,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "None"
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 0,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : [],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, 9.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "None",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : false,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASkeletalMeshActor",
+      "Name" : "ASkeletalMeshActor_2_Copy_2",
+      "NonSceneComponents" : [],
+      "ObjectId" : 27,
+      "Properties" : {
+        "PendingActorLocation" : [0.000000, -6.000000, 0.000000],
+        "PendingActorRotation" : [-0.000000, 0.000000, 0.000000],
+        "PendingActorScale" : [1.000000, 1.000000, 1.000000],
+        "PendingActorVisible" : true,
+        "PendingTagsString" : "",
+        "bNeedsTick" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "USkeletalMeshComponent",
+        "Name" : "USkeletalMeshComponent_3",
+        "ObjectId" : 28,
+        "Properties" : {
+          "AngularDamping" : 0.010000,
+          "AnimInstance" : {
+            "ClassName" : "UCharacterAnimInstance",
+            "Properties" : {
+              "AutoPeriodSec" : 6.000000,
+              "AutoSpeedAmp" : 15.000000,
+              "RootMotionMode" : 1,
+              "SpeedThreshold" : 10.000000,
+              "bAutoDriveSpeed" : true
+            }
+          },
+          "AnimInstanceClass" : "UCharacterAnimInstance",
+          "AnimationData" : {
+            "AnimToPlayPath" : "None",
+            "PlayRate" : 1.000000,
+            "bLooping" : true,
+            "bPlaying" : true
+          },
+          "AnimationMode" : 2,
+          "AnimationTickLOD" : 2,
+          "AnimationTickLODPolicy" : 0,
+          "CachedEditRotator" : [-0.000000, 0.000000, 0.000000],
+          "CollisionEnabled" : 0,
+          "CollisionPreset" : 0,
+          "LinearDamping" : 0.010000,
+          "Mass" : 1.000000,
+          "MaterialSlots" : ["Content/Material/Auto/M_Dwarf.mat"],
+          "ObjectType" : 0,
+          "PhysicsBlendWeight" : 1.000000,
+          "RagdollFaceDownGetUpAnimationPath" : "Content/Data/hirasawa-yui/Getting Up_mixamo_com.uasset",
+          "RagdollFaceUpGetUpAnimationPath" : "Content/Data/hirasawa-yui/Standing Up_mixamo_com.uasset",
+          "RagdollRecoveryBlendDuration" : 0.350000,
+          "RelativeTransform.Location" : [0.000000, -6.000000, 0.000000],
+          "RelativeTransform.Scale" : [1.000000, 1.000000, 1.000000],
+          "ResponseContainer" : {
+            "Responses[0]" : 2,
+            "Responses[1]" : 2,
+            "Responses[2]" : 2,
+            "Responses[3]" : 2,
+            "Responses[4]" : 2
+          },
+          "SkeletalMeshPath" : "Content/Data/GameJam/Dwarf/SK_Dwarf_SkeletalMesh.uasset",
+          "TranslucentSortPriority" : 0,
+          "bAutoActivate" : true,
+          "bCastShadow" : true,
+          "bCastShadowAsTwoSided" : false,
+          "bEditorOnly" : false,
+          "bEnableAnimationTickLOD" : true,
+          "bEnableGravity" : true,
+          "bGenerateOverlapEvents" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bSimulatePhysics" : false,
+          "bTickEnable" : true
+        }
+      }
+    }],
+  "ClassName" : "UWorld",
+  "ContextHandle" : "NewScene",
+  "ContextName" : "New Scene",
+  "Name" : "CharacterDemo",
+  "ObjectId" : 1,
+  "PerspectiveCamera" : {
+    "FOV" : 1.047198,
+    "FarClip" : 1000.000000,
+    "Location" : [12.057167, -7.853288, 5.279281],
+    "NearClip" : 0.100000,
+    "Rotation" : [0.000000, 15.615284, 180.897491]
+  },
+  "Version" : 2,
+  "WorldSettings" : {
+    "GameMode" : ""
+  },
+  "WorldType" : "Editor"
+}

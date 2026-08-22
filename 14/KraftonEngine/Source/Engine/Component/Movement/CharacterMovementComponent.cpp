@@ -1,0 +1,649 @@
+﻿#include "CharacterMovementComponent.h"
+
+#include "Animation/AnimInstance.h"
+#include "Component/Shape/CapsuleComponent.h"
+#include "Component/SceneComponent.h"
+#include "Component/PrimitiveComponent.h"
+#include "Component/Primitive/SkeletalMeshComponent.h"
+#include "Core/Types/PropertyTypes.h"
+#include "Core/TickFunction.h"
+#include "GameFramework/AActor.h"
+#include "GameFramework/Pawn/Character.h"
+#include "GameFramework/World.h"
+#include "Math/Quat.h"
+#include "Math/Rotator.h"
+#include "Physics/BodyInstance.h"
+#include "Physics/PhysicsScene.h"
+#include "Physics/PhysXSDK.h"
+#include "Physics/PhysXConversions.h"
+#include "Physics/PhysicsQueryFilter.h"
+#include "Object/Reflection/ObjectFactory.h"
+#include "Serialization/Archive.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+
+namespace
+{
+	class FCharacterControllerFilterCallback final : public physx::PxControllerFilterCallback
+	{
+	public:
+		bool filter(const physx::PxController& a, const physx::PxController& b) override
+		{
+			(void)a;
+			(void)b;
+			return false;
+		}
+	};
+
+	constexpr float PawnSeparationSkin = 0.001f;
+}
+
+UCharacterMovementComponent::UCharacterMovementComponent()
+{
+	// USkeletalMeshComponent::TickComponent (TG_PrePhysics, default) 가 UpdateAnimation 으로
+	// AnimInstance->PendingRootMotion 을 채운 다음에 CMC 가 그 값을 가져가야 같은 frame 데이터를
+	// 쓸 수 있다. Prerequisite API 가 우리 엔진에 없으므로 TickGroup 분리로 순서 보장.
+	// FTickManager 가 group 순서대로 실행하므로 PrePhysics 가 모두 끝난 뒤 DuringPhysics 가 돈다.
+	PrimaryComponentTick.SetTickGroup(TG_DuringPhysics);
+	PrimaryComponentTick.SetEndTickGroup(TG_DuringPhysics);
+}
+
+void UCharacterMovementComponent::EndPlay()
+{
+	ReleaseController();
+	Super::EndPlay();
+}
+
+bool UCharacterMovementComponent::EnsureController()
+{
+	UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(GetUpdatedComponent());
+	if (!Capsule) return false;
+
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+
+	const bool bControllerShapeChanged = ControllerUpdatedComponent != Capsule ||
+		std::fabs(CachedControllerRadius - Radius) > FMath::Epsilon ||
+		std::fabs(CachedControllerHalfHeight - HalfHeight) > FMath::Epsilon ||
+		std::fabs(CachedControllerContactOffset - ControllerContactOffset) > FMath::Epsilon ||
+		std::fabs(CachedMaxStepHeight - MaxStepHeight) > FMath::Epsilon ||
+		std::fabs(CachedWalkableSlopeAngle - WalkableSlopeAngle) > FMath::Epsilon;
+
+	if (Controller && !bControllerShapeChanged) return true;
+
+	if (Controller)
+	{
+		ReleaseController();
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || !World->GetPhysicsScene()) return false;
+
+	physx::PxControllerManager* Manager = World->GetPhysicsScene()->GetControllerManager();
+	physx::PxMaterial* Material = FPhysXSDK::Get().GetDefaultMaterial();
+	if (!Manager || !Material) return false;
+
+	const FVector Location = Capsule->GetWorldLocation();
+	const float CylinderHeight = std::max(0.01f, HalfHeight * 2.0f - Radius * 2.0f);
+
+	physx::PxCapsuleControllerDesc Desc;
+	Desc.position = physx::PxExtendedVec3(Location.X, Location.Y, Location.Z);
+	Desc.radius = Radius;
+	Desc.height = CylinderHeight;
+	Desc.upDirection = physx::PxVec3(0.0f, 0.0f, 1.0f);
+	Desc.material = Material;
+	Desc.contactOffset = ControllerContactOffset;
+	Desc.stepOffset = MaxStepHeight;
+	Desc.slopeLimit = std::cos(WalkableSlopeAngle * FMath::DegToRad);
+
+	if (!Desc.isValid()) return false;
+
+	Controller = Manager->createController(Desc);
+
+	if (Controller)
+	{
+		ControllerUpdatedComponent = Capsule;
+		CachedControllerRadius = Radius;
+		CachedControllerHalfHeight = HalfHeight;
+		CachedControllerContactOffset = ControllerContactOffset;
+		CachedMaxStepHeight = MaxStepHeight;
+		CachedWalkableSlopeAngle = WalkableSlopeAngle;
+		return true;
+	}
+
+	return false;
+}
+
+void UCharacterMovementComponent::ReleaseController()
+{
+	if (Controller)
+	{
+		Controller->release();
+		Controller = nullptr;
+	}
+
+	ControllerUpdatedComponent = nullptr;
+	CachedControllerRadius = 0.0f;
+	CachedControllerHalfHeight = 0.0f;
+	CachedControllerContactOffset = 0.0f;
+	CachedMaxStepHeight = 0.0f;
+	CachedWalkableSlopeAngle = 0.0f;
+}
+
+void UCharacterMovementComponent::SyncUpdatedComponentFromController()
+{
+	if (!Controller) return;
+
+	USceneComponent* Updated = GetUpdatedComponent();
+	if (!Updated) return;
+
+	const physx::PxExtendedVec3 Position = Controller->getPosition();
+	Updated->SetWorldLocation(FVector(static_cast<float>(Position.x),
+		static_cast<float>(Position.y), static_cast<float>(Position.z)));
+
+	if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Updated))
+	{
+		if (FBodyInstance* Body = Primitive->GetBodyInstance())
+		{
+			Body->SyncToPhysics();
+		}
+	}
+}
+
+void UCharacterMovementComponent::SyncControllerToUpdatedComponentIfNeeded()
+{
+	if (!Controller) return;
+
+	USceneComponent* Updated = GetUpdatedComponent();
+	if (!Updated) return;
+
+	const FVector UpdatedLocation = Updated->GetWorldLocation();
+
+	const physx::PxExtendedVec3 ControllerPosition = Controller->getPosition();
+	const FVector ControllerLocation(
+		static_cast<float>(ControllerPosition.x),
+		static_cast<float>(ControllerPosition.y),
+		static_cast<float>(ControllerPosition.z));
+
+	const float MaxDistanceSq = ControllerSyncTeleportDistance * ControllerSyncTeleportDistance;
+	if (FVector::DistSquared(UpdatedLocation, ControllerLocation) <= MaxDistanceSq) return;
+
+	Controller->setPosition(physx::PxExtendedVec3(UpdatedLocation.X, UpdatedLocation.Y, UpdatedLocation.Z));
+
+	GroundMissFrames = 0;
+}
+
+FControllerMoveResult UCharacterMovementComponent::MoveController(
+	const FVector& Delta,
+	float DeltaTime)
+{
+	if (!EnsureController())
+	{
+		return FControllerMoveResult();
+	}
+
+	const physx::PxVec3 Disp(Delta.X, Delta.Y, Delta.Z);
+	FPhysicsRaycastFilterCallback QueryFilter(ECollisionChannel::Pawn, GetOwner(), ECollisionChannel::Pawn);
+	FCharacterControllerFilterCallback ControllerFilter;
+
+	physx::PxControllerFilters Filters(nullptr, &QueryFilter, &ControllerFilter);
+
+	const physx::PxControllerCollisionFlags Flags = Controller->move(Disp, ControllerMinMoveDistance, DeltaTime, Filters);
+	FControllerMoveResult Result;
+	Result.bHitDown = Flags.isSet(physx::PxControllerCollisionFlag::eCOLLISION_DOWN);
+
+	SyncUpdatedComponentFromController();
+	return Result;
+}
+
+void UCharacterMovementComponent::ResolvePawnPenetration(float DeltaTime)
+{
+	UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(GetUpdatedComponent());
+	UWorld* World = GetWorld();
+	AActor* OwnerActor = GetOwner();
+	if (!Capsule || !World || !OwnerActor)
+	{
+		return;
+	}
+
+	const FVector Location = Capsule->GetWorldLocation();
+	const float Radius = Capsule->GetScaledCapsuleRadius();
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+
+	FVector Correction(0.0f, 0.0f, 0.0f);
+
+	for (AActor* Actor : World->GetActors())
+	{
+		ACharacter* OtherCharacter = Cast<ACharacter>(Actor);
+		if (!OtherCharacter || OtherCharacter == OwnerActor)
+		{
+			continue;
+		}
+
+		UCapsuleComponent* OtherCapsule = OtherCharacter->GetCapsuleComponent();
+		if (!OtherCapsule || !OtherCapsule->IsCollisionEnabled() ||
+			OtherCapsule->GetCollisionObjectType() != ECollisionChannel::Pawn)
+		{
+			continue;
+		}
+
+		const FVector OtherLocation = OtherCapsule->GetWorldLocation();
+		const float HalfHeightSum = HalfHeight + OtherCapsule->GetScaledCapsuleHalfHeight();
+		if (std::fabs(Location.Z - OtherLocation.Z) >= HalfHeightSum)
+		{
+			continue;
+		}
+
+		FVector Delta = Location - OtherLocation;
+		Delta.Z = 0.0f;
+
+		const float MinDistance = Radius + OtherCapsule->GetScaledCapsuleRadius() + PawnSeparationSkin;
+		const float DistanceSq = Delta.X * Delta.X + Delta.Y * Delta.Y;
+		if (DistanceSq >= MinDistance * MinDistance)
+		{
+			continue;
+		}
+
+		FVector Direction;
+		float Distance = 0.0f;
+		if (DistanceSq > FMath::Epsilon)
+		{
+			Distance = std::sqrt(DistanceSq);
+			Direction = Delta * (1.0f / Distance);
+		}
+		else
+		{
+			const uintptr_t OwnerBits = reinterpret_cast<uintptr_t>(OwnerActor);
+			const float Sign = (OwnerBits & 1u) ? 1.0f : -1.0f;
+			Direction = FVector(Sign, 0.0f, 0.0f);
+		}
+
+		const float PushDistance = (MinDistance - Distance) * 0.5f;
+		Correction = Correction + Direction * PushDistance;
+	}
+
+	Correction.Z = 0.0f;
+	if (Correction.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(Correction, DeltaTime);
+	}
+}
+
+bool UCharacterMovementComponent::FindWalkableFloor(float ProbeDistance) const
+{
+	const UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(GetUpdatedComponent());
+	const UWorld* World = GetWorld();
+	FPhysicsScene* PhysicsScene = World ? World->GetPhysicsScene() : nullptr;
+	if (!Capsule || !PhysicsScene || ProbeDistance <= 0.0f)
+	{
+		return false;
+	}
+
+	const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+	const float StartOffset = (std::max)(0.0f, HalfHeight - ControllerContactOffset);
+	const FVector Start = Capsule->GetWorldLocation() + FVector(0.0f, 0.0f, -StartOffset);
+	const float MaxDist = ProbeDistance + ControllerContactOffset * 2.0f;
+
+	FHitResult Hit;
+	if (!PhysicsScene->Raycast(Start, FVector(0.0f, 0.0f, -1.0f), MaxDist, Hit,
+		ECollisionChannel::Pawn, GetOwner(), ECollisionChannel::Pawn))
+	{
+		return false;
+	}
+
+	const float ClampedSlope = std::clamp(WalkableSlopeAngle, 0.0f, 89.0f);
+	const float MinNormalZ = std::cos(ClampedSlope * FMath::DegToRad);
+	return Hit.ImpactNormal.Z >= MinNormalZ;
+}
+
+void UCharacterMovementComponent::AddInputVector(const FVector& WorldDirection, float ScaleValue)
+{
+	AccumulatedInput = AccumulatedInput + WorldDirection * ScaleValue;
+}
+
+void UCharacterMovementComponent::ConsumeInputVector(FVector& Out)
+{
+	Out = AccumulatedInput;
+	AccumulatedInput = FVector(0.0f, 0.0f, 0.0f);
+}
+
+void UCharacterMovementComponent::AddRootMotionDelta(const FTransform& LocalDelta)
+{
+	if (!bHasPendingRootMotion)
+	{
+		PendingRootMotion = LocalDelta;
+		bHasPendingRootMotion = true;
+		return;
+	}
+
+	// 누적 합성 — AnimInstance::AccumulateRootMotion 과 동일한 매트릭스 곱 패턴.
+	// 같은 frame 에 base + montage 처럼 여러 소스가 push 할 수 있어 합성 보장 필요.
+	const FMatrix M = LocalDelta.ToMatrix() * PendingRootMotion.ToMatrix();
+	PendingRootMotion.Location = FVector(M.M[3][0], M.M[3][1], M.M[3][2]);
+	PendingRootMotion.Rotation = (LocalDelta.Rotation * PendingRootMotion.Rotation).GetNormalized();
+	// Scale 은 root motion 에서 보통 1 — 무시.
+}
+
+bool UCharacterMovementComponent::ConsumePendingRootMotion(FTransform& OutLocalDelta)
+{
+	if (!bHasPendingRootMotion)
+	{
+		OutLocalDelta = FTransform();   // Identity
+		return false;
+	}
+	OutLocalDelta = PendingRootMotion;
+	PendingRootMotion = FTransform();
+	bHasPendingRootMotion = false;
+	return true;
+}
+
+void UCharacterMovementComponent::SetMovementMode(EMovementMode NewMode)
+{
+	if (MovementMode == NewMode) return;
+	MovementMode = NewMode;
+	// 추후 OnMovementModeChanged delegate 위치.
+}
+
+void UCharacterMovementComponent::Jump()
+{
+	// Walking 중에만 점프 허용 — 공중 다단 점프 막음. (필요 시 자식 override.)
+	if (MovementMode != EMovementMode::Walking) return;
+	bWantsJump = true;
+}
+
+void UCharacterMovementComponent::LaunchUpward(float UpVelocity)
+{
+	if (UpVelocity <= 0.0f)
+	{
+		return;
+	}
+
+	// Jump 의 bWantsJump 경로(다음 TickWalking 에서 소비)와 달리 즉시 적용 —
+	// 발동 프레임에 바로 떠올라야 launcher 의 적/플레이어 상승이 동기화된다.
+	Velocity.Z = UpVelocity;
+	SetMovementMode(EMovementMode::Falling);
+}
+
+void UCharacterMovementComponent::LaunchAerial(const FVector& NewVelocity)
+{
+	// XY+Z 임펄스를 통째로 박고 Falling 으로 — 백플립 백스텝처럼 수평+수직 동시 도약.
+	Velocity = NewVelocity;
+	SetMovementMode(EMovementMode::Falling);
+}
+
+void UCharacterMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	USceneComponent* Updated = GetUpdatedComponent();
+	if (!Updated) return;
+	if (DeltaTime <= 0.0f) return;
+
+	if (!EnsureController()) return;
+
+	SyncControllerToUpdatedComponentIfNeeded();
+
+	// 매 Tick 회전 적용 상태 reset — 이번 frame 에 root motion 이 yaw 를 적용했는지를
+	// 외부 (Character::Tick) 가 query 할 수 있어야 yaw 충돌 회피 가능.
+	bAppliedRootMotionYawThisFrame = false;
+
+	FVector Input;
+	ConsumeInputVector(Input);
+	Input.Z = 0.0f;   // XY 평면만 — Z 는 mode 가 결정.
+
+	// 1) Input 처리 — XY velocity 갱신 (양 mode 공통).
+	ApplyInputToVelocity(Input, DeltaTime);
+
+	// 1.5) Owner Character 의 Mesh AnimInstance 가 누적해둔 root motion 을 가져와 자기 buffer 로 push.
+	//      Mesh tick (TG_PrePhysics) 이 이미 끝나 PendingRootMotion 이 채워진 상태.
+	//      Mode 가 Ignore 면 가져갈 필요 자체가 없음 (AccumulateRootMotion 측에서 누적도 안 됨).
+	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+	{
+		if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+		{
+			if (UAnimInstance* AI = Mesh->GetAnimInstance())
+			{
+				if (AI->GetRootMotionMode() != ERootMotionMode::IgnoreRootMotion)
+				{
+					AddRootMotionDelta(AI->ConsumeRootMotion());
+				}
+			}
+		}
+	}
+
+	// 2) Root motion 소비 — local delta 를 world frame 으로 변환 (Updated 의 yaw 기준).
+	//    XY 만 mode 분기로 위임. Z 는 두 mode 모두 무시:
+	//      Walking — floor stick 이 Z 결정
+	//      Falling — gravity 가 Z 결정
+	//    Climbing/Swimming 같은 mode 추가 시 그때 재검토.
+	FTransform RootMotionDelta;
+	const bool bHadRootMotion = ConsumePendingRootMotion(RootMotionDelta);
+	FVector RootMotionWorldXY(0.0f, 0.0f, 0.0f);
+	if (bHadRootMotion)
+	{
+		const FRotator ActorRot = Updated->GetWorldRotation();
+		// FRotator ctor 는 (Pitch, Yaw, Roll) 순서 — Yaw 는 두 번째 인자.
+		const FQuat    YawOnly  = FRotator(0.0f, ActorRot.Yaw, 0.0f).ToQuaternion();
+		FVector        World    = YawOnly.RotateVector(RootMotionDelta.Location);
+
+		// 추출된 delta 는 애님(메시 자산) 로컬 단위 — 메시 컴포넌트가 스케일되어 있으면
+		// (예: 캐릭터 메시 ×3) 시각 보폭과 이동량이 어긋난다. 메시 world scale 로 보정.
+		if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+		{
+			if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
+			{
+				const FVector MeshScale = Mesh->GetWorldScale();
+				World.X *= MeshScale.X;
+				World.Y *= MeshScale.Y;
+			}
+		}
+
+		RootMotionWorldXY.X = World.X;
+		RootMotionWorldXY.Y = World.Y;
+	}
+
+	// 3) Mode 별 Z 처리 + 위치 적용 (input velocity + root motion XY 합산).
+	if (MovementMode == EMovementMode::Walking)
+	{
+		TickWalking(DeltaTime, RootMotionWorldXY);
+	}
+	else
+	{
+		TickFalling(DeltaTime, RootMotionWorldXY);
+	}
+
+	ResolvePawnPenetration(DeltaTime);
+
+	// 4) Root motion yaw 적용 — 기본 OFF (bApplyRootMotionRotation).
+	//    Mixamo 류 에셋은 공격 스윙의 몸통 회전이 root 본에 베이크돼 있어 (클립 중간
+	//    yaw ±180° 요동) 캡슐에 옮기면 캡슐이 스핀하고 이동 방향까지 오염된다.
+	//    회전은 포즈(애니메이션)에 남겨두고 캡슐은 translation 만 받는 게 안전 기본값.
+	//    전용 root 본이 깨끗하게 authoring 된 rig (turn-in-place 등) 에서만 켤 것.
+	//    yaw 가 적용되면 bAppliedRootMotionYawThisFrame 을 켜서 PhysOrientToMovement /
+	//    Character 의 control yaw 덮어쓰기 둘 다 같은 frame skip 되도록 한다.
+	if (bHadRootMotion && bApplyRootMotionRotation)
+	{
+		const FRotator DeltaRot = RootMotionDelta.Rotation.ToRotator();
+		if (std::fabs(DeltaRot.Yaw) > 1e-4f)
+		{
+			FRotator R = Updated->GetRelativeRotation();
+			R.Yaw += DeltaRot.Yaw;
+			Updated->SetRelativeRotation(R);
+			bAppliedRootMotionYawThisFrame = true;
+		}
+	}
+
+	// 5) Orient yaw to movement direction. Root motion 이 yaw 를 잡고 있는 frame 은 skip —
+	//    그렇지 않으면 PhysOrient 가 root motion 회전을 Velocity 방향으로 다시 lerp 해
+	//    의도된 회전이 무효화된다 (turn-in-place anim 가장 큰 피해).
+	if (bOrientRotationToMovement && !bAppliedRootMotionYawThisFrame)
+	{
+		PhysOrientToMovement(DeltaTime);
+	}
+}
+
+void UCharacterMovementComponent::PhysOrientToMovement(float DeltaTime)
+{
+	USceneComponent* Updated = GetUpdatedComponent();
+	if (!Updated) return;
+
+	// 평면 속도 작으면 회전 skip — 마지막 facing 유지.
+	const float SpeedSq2D = Velocity.X * Velocity.X + Velocity.Y * Velocity.Y;
+	constexpr float MinSpeedSq = 1e-4f;
+	if (SpeedSq2D < MinSpeedSq) return;
+
+	// Target yaw — Velocity 방향. UE 의 atan2(Y, X) 는 +X 가 0°, +Y 가 90° (좌표계 가정).
+	const float TargetYaw = std::atan2(Velocity.Y, Velocity.X) * (180.0f / 3.14159265f);
+
+	FRotator R = Updated->GetRelativeRotation();
+	const float CurrentYaw = R.Yaw;
+
+	// 최단 회전 방향 (delta ∈ [-180, 180])
+	float Delta = TargetYaw - CurrentYaw;
+	while (Delta >  180.0f) Delta -= 360.0f;
+	while (Delta < -180.0f) Delta += 360.0f;
+
+	const float Step = RotationYawRate * DeltaTime;
+	if (std::fabs(Delta) <= Step)
+	{
+		R.Yaw = TargetYaw;
+	}
+	else
+	{
+		R.Yaw = CurrentYaw + (Delta > 0.0f ? Step : -Step);
+	}
+	Updated->SetRelativeRotation(R);
+}
+
+void UCharacterMovementComponent::ApplyInputToVelocity(const FVector& Input, float DeltaTime)
+{
+	const float InputLen = Input.Length();
+	if (InputLen > 0.0f)
+	{
+		// 입력 방향으로 가속 (XY 만).
+		const FVector Direction = Input * (1.0f / InputLen);
+		Velocity.X += Direction.X * MaxAcceleration * DeltaTime;
+		Velocity.Y += Direction.Y * MaxAcceleration * DeltaTime;
+	}
+	else if (MovementMode == EMovementMode::Walking)
+	{
+		// Walking 에선 input 없으면 braking. Falling 중 air control 없음 = 평면 속도 유지.
+		FVector V2D(Velocity.X, Velocity.Y, 0.0f);
+		const float Speed2D = V2D.Length();
+		if (Speed2D > 0.0f)
+		{
+			const float NewSpeed = std::max(0.0f, Speed2D - BrakingFriction * DeltaTime);
+			const FVector Dir    = V2D * (1.0f / Speed2D);
+			Velocity.X = Dir.X * NewSpeed;
+			Velocity.Y = Dir.Y * NewSpeed;
+		}
+	}
+
+	// MaxWalkSpeed 클램프 (평면 속도만).
+	FVector V2D(Velocity.X, Velocity.Y, 0.0f);
+	const float Speed2D = V2D.Length();
+	if (Speed2D > MaxWalkSpeed)
+	{
+		const FVector Dir = V2D * (1.0f / Speed2D);
+		Velocity.X = Dir.X * MaxWalkSpeed;
+		Velocity.Y = Dir.Y * MaxWalkSpeed;
+	}
+}
+
+void UCharacterMovementComponent::TickWalking(float DeltaTime, const FVector& RootMotionWorldXY)
+{
+	USceneComponent* Updated = GetUpdatedComponent();
+
+	// Jump 의도가 있으면 — Velocity.Z 박고 즉시 Falling 으로 전환. 이 frame 의 XY 는 그대로 진행.
+	if (bWantsJump)
+	{
+		bWantsJump = false;
+		GroundMissFrames = 0;
+		Velocity.Z = JumpZVelocity;
+		SetMovementMode(EMovementMode::Falling);
+		// XY 이동은 Falling 분기로 위임 — 한 frame 안 mode 전환이라 즉시 falling tick.
+		TickFalling(DeltaTime, RootMotionWorldXY);
+		return;
+	}
+
+	// Walking 중 Z velocity 는 0 — floor stick 으로만 Z 결정.
+	Velocity.Z = 0.0f;
+
+	// XY movement blocks pawns; floor detection is a separate query that ignores pawns.
+	const FVector XYOffset(
+		Velocity.X * DeltaTime + RootMotionWorldXY.X,
+		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
+		0.0f);
+	if (XYOffset.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(XYOffset, DeltaTime);
+	}
+
+	MoveController(FVector(0.0f, 0.0f, -FloorProbeDistance), DeltaTime);
+	const bool bHitDown = FindWalkableFloor(FloorProbeDistance);
+
+	if (bHitDown)
+	{
+		GroundMissFrames = 0;
+		Velocity.Z = 0.0f;
+	}
+	else
+	{
+		++GroundMissFrames;
+		if (GroundMissFrames > GroundMissToleranceFrames)
+		{
+			GroundMissFrames = 0;
+			SetMovementMode(EMovementMode::Falling);
+		}
+	}
+}
+
+void UCharacterMovementComponent::TickFalling(float DeltaTime, const FVector& RootMotionWorldXY)
+{
+	USceneComponent* Updated = GetUpdatedComponent();
+
+	// Gravity — Z 만. (양수 Gravity → -Z 가속). GravityScale 로 일시 부양 (궁극기 체공 등).
+	Velocity.Z -= Gravity * GravityScale * DeltaTime;
+
+	// Horizontal and vertical movement both keep pawn/CCT collision. Landing uses a separate floor query.
+	const FVector XYOffset(
+		Velocity.X * DeltaTime + RootMotionWorldXY.X,
+		Velocity.Y * DeltaTime + RootMotionWorldXY.Y,
+		0.0f);
+	if (XYOffset.Length() > ControllerMinMoveDistance)
+	{
+		MoveController(XYOffset, DeltaTime);
+	}
+
+	const FVector ZOffset(0.0f, 0.0f, Velocity.Z * DeltaTime);
+	const FControllerMoveResult Result = MoveController(ZOffset, DeltaTime);
+	const bool bHitDown = Result.bHitDown && FindWalkableFloor((std::max)(FloorProbeDistance, -ZOffset.Z + ControllerContactOffset));
+
+	if (Velocity.Z <= 0.0f && bHitDown)
+	{
+		GroundMissFrames = 0;
+		Velocity.Z = 0.0f;
+		SetMovementMode(EMovementMode::Walking);
+	}
+}
+
+void UCharacterMovementComponent::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+	Ar << MaxWalkSpeed;
+	Ar << MaxAcceleration;
+	Ar << BrakingFriction;
+	Ar << Gravity;
+	Ar << FloorProbeDistance;
+	Ar << JumpZVelocity;
+	Ar << bOrientRotationToMovement;
+	Ar << RotationYawRate;
+	Ar << ControllerContactOffset;
+	Ar << MaxStepHeight;
+	Ar << WalkableSlopeAngle;
+	Ar << ControllerMinMoveDistance;
+	Ar << GroundMissToleranceFrames;
+	Ar << ControllerSyncTeleportDistance;
+}

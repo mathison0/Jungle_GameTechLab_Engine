@@ -1,0 +1,577 @@
+#include "Game/Crowd/CrowdCombatManager.h"
+
+#include "Game/Musou/Combat/BattleComponent.h"
+#include "Game/Musou/Combat/AttackTypes.h"
+#include "Game/Musou/Combat/HitTypes.h"
+#include "Game/Musou/GameMode/MusouGameMode.h"
+#include "GameFramework/Pawn/Pawn.h"
+
+#include <algorithm>
+#include <cmath>
+#include <utility>
+
+namespace
+{
+	FVector NormalizedXY(const FVector& V)
+	{
+		const float LenSq = V.X * V.X + V.Y * V.Y;
+		if (LenSq <= 1.e-6f)
+		{
+			return FVector::ZeroVector;
+		}
+
+		const float InvLen = 1.0f / std::sqrt(LenSq);
+		return FVector(V.X * InvLen, V.Y * InvLen, 0.0f);
+	}
+
+	float DistanceSquaredXY(const FVector& A, const FVector& B)
+	{
+		const float DX = A.X - B.X;
+		const float DY = A.Y - B.Y;
+		return DX * DX + DY * DY;
+	}
+
+	int32 ReactionPriority(EUnitState State)
+	{
+		switch (State)
+		{
+		case EUnitState::Dead:
+			return 3;
+		case EUnitState::KnockDown:
+			return 2;
+		case EUnitState::Hit:
+			return 1;
+		default:
+			return 0;
+		}
+	}
+
+	void ResetKnockDownRecovery(FCrowdUnit& Unit)
+	{
+		Unit.KnockDownFlyingBackTimeRemaining = 0.0f;
+		Unit.KnockDownGettingUpTimeRemaining = 0.0f;
+		Unit.bKnockDownGettingUp = false;
+	}
+
+	bool CanUseAnimationDrivenKnockDown(const FCrowdUnit& Unit)
+	{
+		return Unit.Archetype.CombatType == EUnitCombatType::Melee
+			&& Unit.KnockDownAnimDuration > 0.0f
+			&& Unit.GettingUpAnimDuration > 0.0f;
+	}
+
+	bool HasAnimationDrivenKnockDown(const FCrowdUnit& Unit)
+	{
+		return Unit.KnockDownFlyingBackTimeRemaining > 0.0f
+			|| Unit.KnockDownGettingUpTimeRemaining > 0.0f
+			|| Unit.bKnockDownGettingUp;
+	}
+
+	void ConfigureKnockDownRecovery(FCrowdUnit& Unit, float FallbackDuration, const FDamageEvent& Event)
+	{
+		ResetKnockDownRecovery(Unit);
+		if (!CanUseAnimationDrivenKnockDown(Unit))
+		{
+			Unit.StateTimeRemaining = (std::max)(FallbackDuration, 0.0f);
+			return;
+		}
+
+		const float KnockbackDuration = (std::max)(Event.KnockbackDuration, 0.0f);
+		Unit.KnockDownFlyingBackTimeRemaining = (std::max)(Unit.KnockDownAnimDuration, KnockbackDuration);
+		Unit.KnockDownGettingUpTimeRemaining = Unit.GettingUpAnimDuration;
+		Unit.bKnockDownGettingUp = false;
+		Unit.StateTimeRemaining = Unit.KnockDownFlyingBackTimeRemaining + Unit.KnockDownGettingUpTimeRemaining;
+	}
+
+	void FinishControlLockedState(FCrowdUnit& Unit)
+	{
+		Unit.State = EUnitState::Idle;
+		Unit.StateTimeRemaining = 0.0f;
+		Unit.KnockbackTimeRemaining = 0.0f;
+		Unit.KnockbackVelocity = FVector::ZeroVector;
+		Unit.Velocity = FVector::ZeroVector;
+		Unit.bAirborne = false;
+		Unit.AirborneVelZ = 0.0f;
+		ResetKnockDownRecovery(Unit);
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+		Unit.AnimTime = 0.0f;
+	}
+
+	bool UpdateAnimationDrivenKnockDown(FCrowdUnit& Unit, float TimeStep)
+	{
+		if (!HasAnimationDrivenKnockDown(Unit))
+		{
+			return false;
+		}
+
+		if (!Unit.bKnockDownGettingUp)
+		{
+			Unit.KnockDownFlyingBackTimeRemaining =
+				(std::max)(Unit.KnockDownFlyingBackTimeRemaining - TimeStep, 0.0f);
+			Unit.StateTimeRemaining = Unit.KnockDownFlyingBackTimeRemaining + Unit.KnockDownGettingUpTimeRemaining;
+			if (Unit.KnockDownFlyingBackTimeRemaining > 0.0f
+				|| Unit.bAirborne
+				|| Unit.KnockbackTimeRemaining > 0.0f)
+			{
+				return true;
+			}
+
+			Unit.bKnockDownGettingUp = true;
+			Unit.Velocity = FVector::ZeroVector;
+			Unit.AnimState = static_cast<uint16>(Unit.State);
+			Unit.AnimTime = 0.0f;
+			Unit.StateTimeRemaining = Unit.KnockDownGettingUpTimeRemaining;
+			if (Unit.KnockDownGettingUpTimeRemaining > 0.0f)
+			{
+				return true;
+			}
+
+			FinishControlLockedState(Unit);
+			return true;
+		}
+
+		Unit.KnockDownGettingUpTimeRemaining =
+			(std::max)(Unit.KnockDownGettingUpTimeRemaining - TimeStep, 0.0f);
+		Unit.StateTimeRemaining = Unit.KnockDownGettingUpTimeRemaining;
+		if (Unit.KnockDownGettingUpTimeRemaining > 0.0f)
+		{
+			return true;
+		}
+
+		FinishControlLockedState(Unit);
+		return true;
+	}
+
+	bool ApplyTimedReactionState(
+		FCrowdUnit& Unit,
+		EUnitState NewState,
+		float Duration,
+		const FDamageEvent& Event)
+	{
+		const int32 CurrentPriority = ReactionPriority(Unit.State);
+		const int32 NewPriority = ReactionPriority(NewState);
+		if (CurrentPriority > NewPriority)
+		{
+			return false;
+		}
+
+		const EUnitState PreviousState = Unit.State;
+		Unit.State = NewState;
+		ResetKnockDownRecovery(Unit);
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+		Unit.AnimTime = 0.0f;
+
+		if (NewState == EUnitState::Dead)
+		{
+			Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
+			Unit.Target = {};
+			Unit.Velocity = FVector::ZeroVector;
+			Unit.KnockbackTimeRemaining = 0.0f;
+			Unit.KnockbackVelocity = FVector::ZeroVector;
+
+			// 공중 사망 시체는 bAirborne 유지 — MovementManager 의 Dead 분기가 착지까지
+			// 낙하시킨다 (저글 킬이 공중에 떠 있지 않게). 띄우기 공격으로 즉사한 적도
+			// 시체가 솟구치며 날아간다 — 무쌍식 학살 연출.
+			if (Event.LaunchVelocityZ > 0.0f)
+			{
+				Unit.bAirborne = true;
+				Unit.AirborneVelZ = Event.LaunchVelocityZ;
+			}
+			return true;
+		}
+
+		if (NewState == EUnitState::KnockDown)
+		{
+			ConfigureKnockDownRecovery(Unit, Duration, Event);
+		}
+		else
+		{
+			Unit.StateTimeRemaining = (std::max)(Duration, 0.0f);
+		}
+
+		const FVector KnockbackDirection = NormalizedXY(Event.HitDirection);
+		const bool bHasKnockback = Event.KnockbackDistance > 0.0f
+			&& Event.KnockbackDuration > 0.0f
+			&& !KnockbackDirection.IsNearlyZero();
+		if (bHasKnockback)
+		{
+			Unit.KnockbackTimeRemaining = Event.KnockbackDuration;
+			Unit.KnockbackVelocity = KnockbackDirection * (Event.KnockbackDistance / Event.KnockbackDuration);
+		}
+		else if (PreviousState != NewState || NewState == EUnitState::KnockDown)
+		{
+			Unit.KnockbackTimeRemaining = 0.0f;
+			Unit.KnockbackVelocity = FVector::ZeroVector;
+			Unit.Velocity = FVector::ZeroVector;
+		}
+
+		// 띄우기 — 공중 상태 진입/갱신. 이미 공중이어도 재타격 시 다시 솟구침 (저글).
+		// 공중 동안 상태 만료는 보류(UpdateStateTimers)되고 착지 후 잔여 시간을 소화한다.
+		if (Event.LaunchVelocityZ > 0.0f)
+		{
+			Unit.bAirborne = true;
+			Unit.AirborneVelZ = Event.LaunchVelocityZ;
+		}
+
+		return true;
+	}
+}
+
+void FCrowdCombatManager::ClearDamageEvents()
+{
+	DamageEvents.clear();
+}
+
+void FCrowdCombatManager::ApplyRadialDamage(
+	const FVector& Center,
+	float Radius,
+	float Damage,
+	EUnitTeam TargetTeam,
+	const FCrowdUnitStore& UnitStore,
+	const FCrowdSpatialPartition& SpatialPartition)
+{
+	if (Radius <= 0.0f || Damage <= 0.0f)
+	{
+		return;
+	}
+
+	const TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	TArray<uint32> Candidates;
+	SpatialPartition.QueryUnitsInRadius(Units, Center, Radius, Candidates);
+	const float RadiusSq = Radius * Radius;
+
+	auto QueueDamage = [&](uint32 UnitIndex, const FCrowdUnit& Unit)
+	{
+		DamageEvents.push_back({
+			FUnitHandle{ UnitIndex, Unit.Generation },
+			Damage,
+			NormalizedXY(Unit.Position - Center)
+		});
+	};
+
+	for (uint32 UnitIndex : Candidates)
+	{
+		if (UnitIndex >= Units.size())
+		{
+			continue;
+		}
+
+		const FCrowdUnit& Unit = Units[UnitIndex];
+		if (!IsCrowdUnitAliveForGameplay(Unit) || Unit.Team != TargetTeam)
+		{
+			continue;
+		}
+
+		QueueDamage(UnitIndex, Unit);
+	}
+
+	for (uint32 UnitIndex = 0; UnitIndex < static_cast<uint32>(Units.size()); ++UnitIndex)
+	{
+		const FCrowdUnit& Unit = Units[UnitIndex];
+		if (Unit.LOD != ECrowdUnitLOD::Dormant
+			|| !IsCrowdUnitAliveForGameplay(Unit)
+			|| Unit.Team != TargetTeam
+			|| DistanceSquaredXY(Unit.Position, Center) > RadiusSq)
+		{
+			continue;
+		}
+
+		QueueDamage(UnitIndex, Unit);
+	}
+}
+
+void FCrowdCombatManager::HandleAttackEvent(
+	const FMusouAttackEvent& Event,
+	const FCrowdUnitStore& UnitStore,
+	const FCrowdSpatialPartition& SpatialPartition,
+	AMusouGameMode* GameMode)
+{
+	if (!Event.bFromPlayer || Event.Damage <= 0.0f || Event.Spec.Range <= 0.0f)
+	{
+		return;
+	}
+
+	const TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	TArray<uint32> Candidates;
+	SpatialPartition.QueryUnitsInRadius(Units, Event.Origin, Event.Spec.Range, Candidates);
+
+	int32 HitCount = 0;
+	auto QueuePlayerHit = [&](uint32 UnitIndex, const FCrowdUnit& Unit)
+	{
+		if (GameMode)
+		{
+			FMusouHitEvent Hit;
+			Hit.Attack = &Event;
+			Hit.UnitHandle = FUnitHandle{ UnitIndex, Unit.Generation };
+			Hit.HitLocation = Unit.Position;
+			Hit.HitDirection = NormalizedXY(Unit.Position - Event.Origin);
+			Hit.Damage = Event.Damage;
+			GameMode->NotifyHitConfirmed(Hit);
+		}
+
+		DamageEvents.push_back({
+			FUnitHandle{ UnitIndex, Unit.Generation },
+			Event.Damage,
+			NormalizedXY(Unit.Position - Event.Origin),
+			true,
+			true,
+			true,
+			Event.Spec.KnockbackDist,
+			Event.Spec.KnockbackDur,
+			Event.Spec.LaunchZ
+		});
+		++HitCount;
+	};
+
+	for (uint32 UnitIndex : Candidates)
+	{
+		if (UnitIndex >= Units.size())
+		{
+			continue;
+		}
+
+		const FCrowdUnit& Unit = Units[UnitIndex];
+		if (!IsCrowdUnitAliveForGameplay(Unit) || Unit.Team != EUnitTeam::Enemy || !Event.IsInVolume(Unit.Position))
+		{
+			continue;
+		}
+
+		QueuePlayerHit(UnitIndex, Unit);
+	}
+
+	for (uint32 UnitIndex = 0; UnitIndex < static_cast<uint32>(Units.size()); ++UnitIndex)
+	{
+		const FCrowdUnit& Unit = Units[UnitIndex];
+		if (Unit.LOD != ECrowdUnitLOD::Dormant
+			|| !IsCrowdUnitAliveForGameplay(Unit)
+			|| Unit.Team != EUnitTeam::Enemy
+			|| !Event.IsInVolume(Unit.Position))
+		{
+			continue;
+		}
+
+		QueuePlayerHit(UnitIndex, Unit);
+	}
+
+	if (HitCount > 0 && GameMode)
+	{
+		GameMode->NotifyAttackComboHits(Event, HitCount);
+		GameMode->NotifyAttackHitFeedback(Event, HitCount);
+	}
+}
+
+void FCrowdCombatManager::UpdateStateTimers(
+	float DeltaTime,
+	FCrowdUnitStore& UnitStore,
+	TArray<FUnitHandle>& OutRemovedHandles)
+{
+	OutRemovedHandles.clear();
+
+	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	const float TimeStep = (std::max)(DeltaTime, 0.0f);
+	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
+	{
+		FCrowdUnit& Unit = Units[Index];
+		if (!Unit.bAlive)
+		{
+			continue;
+		}
+
+		Unit.HitFlashTimeRemaining = (std::max)(Unit.HitFlashTimeRemaining - TimeStep, 0.0f);
+		if (!IsCrowdUnitControlLocked(Unit.State))
+		{
+			continue;
+		}
+
+		if (Unit.State == EUnitState::KnockDown && UpdateAnimationDrivenKnockDown(Unit, TimeStep))
+		{
+			continue;
+		}
+
+		// 공중(띄움) 동안엔 상태 만료 보류 — 착지(MovementManager) 후 잔여 시간 소화.
+		// (만료를 허용하면 공중에서 Idle 로 풀려 지면 스냅으로 순간이동한다.)
+		if (Unit.bAirborne && Unit.State != EUnitState::Dead)
+		{
+			continue;
+		}
+
+		Unit.StateTimeRemaining = (std::max)(Unit.StateTimeRemaining - TimeStep, 0.0f);
+		if (Unit.StateTimeRemaining > 0.0f)
+		{
+			continue;
+		}
+
+		if (Unit.State == EUnitState::Dead)
+		{
+			FUnitHandle Handle{ Index, Unit.Generation };
+			if (UnitStore.RemoveUnit(Handle))
+			{
+				OutRemovedHandles.push_back(Handle);
+			}
+			continue;
+		}
+
+		FinishControlLockedState(Unit);
+	}
+}
+
+void FCrowdCombatManager::UpdateCombat(
+	float DeltaTime,
+	FCrowdUnitStore& UnitStore,
+	APawn* PlayerPawn,
+	float PlayerProxyRadius,
+	const FCrowdCombatSettings& Settings)
+{
+	TArray<FCrowdUnit>& Units = UnitStore.GetUnits();
+	for (uint32 Index = 0; Index < static_cast<uint32>(Units.size()); ++Index)
+	{
+		FCrowdUnit& Unit = Units[Index];
+		if (!ShouldSimulateCrowdUnitThisFrame(Unit))
+		{
+			continue;
+		}
+
+		const float UnitDeltaTime = Unit.SimulationDeltaTime > 0.0f ? Unit.SimulationDeltaTime : DeltaTime;
+		Unit.AttackCooldownRemaining = (std::max)(Unit.AttackCooldownRemaining - UnitDeltaTime, 0.0f);
+		Unit.AnimTime += UnitDeltaTime;
+		Unit.AnimState = static_cast<uint16>(Unit.State);
+
+		if (Unit.TargetKind == ECrowdTargetKind::Player)
+		{
+			if (!Unit.bHasAttackToken || Unit.State != EUnitState::Attack || Unit.AttackCooldownRemaining > 0.0f)
+			{
+				continue;
+			}
+
+			if (!PlayerPawn)
+			{
+				Unit.State = EUnitState::Idle;
+				continue;
+			}
+
+			UBattleComponent* PlayerBattle = PlayerPawn->GetComponentByClass<UBattleComponent>();
+			if (!PlayerBattle || PlayerBattle->IsDead())
+			{
+				Unit.State = EUnitState::Idle;
+				continue;
+			}
+
+			const FUnitArchetype& Archetype = Unit.Archetype;
+			const float AttackRange = (std::max)(Archetype.AttackRange + Unit.Radius + (std::max)(PlayerProxyRadius, 0.0f), 0.0f);
+			const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
+			const float DistanceSq = DistanceSquaredXY(Unit.Position, PlayerPawn->GetActorLocation());
+			if (DistanceSq > AttackRange * AttackRange)
+			{
+				if (DistanceSq > AttackExitRange * AttackExitRange)
+				{
+					Unit.State = EUnitState::Chase;
+				}
+				continue;
+			}
+
+			PlayerBattle->ApplyDamage(Archetype.AttackDamage, nullptr);
+			Unit.AttackCooldownRemaining = Archetype.AttackCooldown;
+			continue;
+		}
+
+		if (Unit.State != EUnitState::Attack || Unit.AttackCooldownRemaining > 0.0f)
+		{
+			continue;
+		}
+
+		const FUnitArchetype& Archetype = Unit.Archetype;
+		const FCrowdUnit* Target = UnitStore.ResolveUnit(Unit.Target);
+		if (!Target || !IsCrowdUnitCombatActive(*Target))
+		{
+			Unit.State = EUnitState::Idle;
+			continue;
+		}
+
+		const float AttackRange = (std::max)(Archetype.AttackRange + Unit.Radius + Target->Radius, 0.0f);
+		const float AttackExitRange = AttackRange + (std::max)(Settings.AttackStateExitHysteresis, 0.0f);
+		const float DistanceSq = DistanceSquaredXY(Unit.Position, Target->Position);
+		if (DistanceSq > AttackRange * AttackRange)
+		{
+			if (DistanceSq > AttackExitRange * AttackExitRange)
+			{
+				Unit.State = EUnitState::Chase;
+			}
+			continue;
+		}
+
+		DamageEvents.push_back({
+			Unit.Target,
+			Archetype.AttackDamage,
+			NormalizedXY(Target->Position - Unit.Position)
+		});
+		Unit.AttackCooldownRemaining = Archetype.AttackCooldown;
+	}
+}
+
+void FCrowdCombatManager::ProcessDamageEvents(
+	FCrowdUnitStore& UnitStore,
+	AMusouGameMode* GameMode,
+	const FCrowdCombatSettings& Settings,
+	TArray<FUnitHandle>& OutRemovedHandles)
+{
+	OutRemovedHandles.clear();
+	if (DamageEvents.empty())
+	{
+		return;
+	}
+
+	TArray<FDamageEvent> Events = std::move(DamageEvents);
+	DamageEvents.clear();
+
+	int32 PlayerKillCount = 0;
+	for (const FDamageEvent& Event : Events)
+	{
+		FCrowdUnit* Target = UnitStore.ResolveUnit(Event.Target);
+		if (!Target || !IsCrowdUnitAliveForGameplay(*Target) || Event.Damage <= 0.0f)
+		{
+			continue;
+		}
+
+		Target->HP -= Event.Damage;
+		if (Event.bTriggerHitFlash)
+		{
+			Target->HitFlashDuration = (std::max)(Settings.HitFlashDuration, 0.001f);
+			Target->HitFlashIntensity = (std::max)(Settings.HitFlashIntensity, 0.0f);
+			Target->HitFlashTimeRemaining = Target->HitFlashDuration;
+		}
+		if (Target->HP <= 0.0f)
+		{
+			Target->HP = 0.0f;
+			if (Event.bCountAsPlayerKill && Target->Team == EUnitTeam::Enemy)
+			{
+				++PlayerKillCount;
+			}
+
+			ApplyTimedReactionState(*Target, EUnitState::Dead, Settings.DeadStateDuration, Event);
+			if (Settings.DeadStateDuration <= 0.0f && UnitStore.RemoveUnit(Event.Target))
+			{
+				OutRemovedHandles.push_back(Event.Target);
+			}
+			continue;
+		}
+
+		// 띄우기 공격은 넉백 거리와 무관하게 다운 — 공중에 뜬 채 Hit(0.18s) 가
+		// 끝나버리면 어색하므로 KnockDown 으로 진입시켜 착지까지 유지한다.
+		const bool bShouldKnockDown = (Event.bCanKnockDown
+			&& Event.KnockbackDistance >= (std::max)(Settings.KnockDownMinKnockbackDistance, 0.0f))
+			|| Event.LaunchVelocityZ > 0.0f;
+		if (bShouldKnockDown)
+		{
+			ApplyTimedReactionState(*Target, EUnitState::KnockDown, Settings.KnockDownStateDuration, Event);
+		}
+		else
+		{
+			ApplyTimedReactionState(*Target, EUnitState::Hit, Settings.HitStateDuration, Event);
+		}
+	}
+
+	if (PlayerKillCount > 0 && GameMode)
+	{
+		GameMode->NotifyEnemiesKilled(PlayerKillCount);
+	}
+}

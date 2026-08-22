@@ -1,0 +1,22 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/tripo_mat_a2492f66.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "/mnt/pfs/server/tripo-studio/20260421/a2492f66-9d50-4fda-a90b-379c05c86703/unpack_fbx_tmp/tripo_convert_a2492f66-9d50-4fda-a90b-379c05c86703.fbm/fantasyknight3dmodel_basecolor.JPEG",
+    "NormalTexture" : "/mnt/pfs/server/tripo-studio/20260421/a2492f66-9d50-4fda-a90b-379c05c86703/unpack_fbx_tmp/tripo_convert_a2492f66-9d50-4fda-a90b-379c05c86703.fbm/fantasyknight3dmodel_normal.JPEG"
+  },
+  "bEnableBloom" : false
+}

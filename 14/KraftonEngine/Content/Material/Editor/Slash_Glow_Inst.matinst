@@ -1,0 +1,14 @@
+{
+        "EmissiveIntensity" : 12.000000,
+        "Parameters" : {
+          "SlashTint" : [1.000000, 0.250000, 0.100000, 1.000000]
+        },
+        "ParentMaterial" : "Content/Material/Editor/Slash_Glow.mat",
+        "PathFileName" : "Content/Material/Editor/Slash_Glow_Inst.matinst",
+        "Textures" : {
+          "DiffuseTexture" : "Content/Texture/SparkStreak.png"
+        },
+        "bOverrideEmissiveColor" : false,
+        "bOverrideEmissiveIntensity" : true,
+        "bOverrideEnableBloom" : false
+      }

@@ -1,0 +1,316 @@
+﻿#pragma once
+
+#include "GameFramework/Pawn/LuaCharacter.h"
+#include "Game/Musou/Combat/AttackTypes.h"   // EAttackContext
+// FMusouAttackStep/Slot/CameraShot — attack_data.lua 로드 데이터 (FMusouCameraShot 을
+// 멤버로 들고 있어 전방 선언으로는 부족).
+#include "Game/Musou/Combat/AttackDataRegistry.h"
+#include "Math/Vector.h"
+
+#include <utility>
+
+#include "Source/Game/Musou/Character/MusouCharacter.generated.h"
+
+class UBattleComponent;
+class UComboComponent;
+class UBoneAttachedStaticMeshComponent;
+class UHitFlashComponent;
+class UCineCameraComponent;
+class APlayerCameraManager;
+class UAnimMontage;
+class UAnimSequence;
+
+// ============================================================
+// AMusouCharacter — 무쌍 플레이어 캐릭터 (Barbarian)
+//
+// ALuaCharacter 기반:
+//   - Capsule → SkeletalMesh(Barbarian) + SpringArm → Camera 체인
+//   - 애님: ULuaAnimInstance + Anim/player_anim.lua (locomotion/공격 몽타주)
+//   - 전투: UBattleComponent(체력/데미지) + UComboComponent(콤보 체인)
+//
+// 배치: 에디터 우클릭 → Place Actor → "Musou Character (Barbarian)"
+// ============================================================
+UCLASS()
+class AMusouCharacter : public ALuaCharacter
+{
+public:
+	GENERATED_BODY()
+	AMusouCharacter() = default;
+	~AMusouCharacter() override = default;
+
+	// 기본 에셋 경로
+	static constexpr const char* DefaultMeshPath = "Content/Data/GameJam/Barbarian/Barbarian_SkeletalMesh.uasset";
+	static constexpr const char* DefaultAnimScript = "Anim/player_anim.lua";
+	// Pawn 레벨 게임 로직 (히트 판정/피드백) — Content/Script 기준 상대경로
+	static constexpr const char* DefaultPawnScript = "Game/barbarian_character.lua";
+
+	// Barbarian 메시 + player_anim.lua로 구성하는 기본 진입점.
+	void InitDefaultComponents();
+
+	// 메시 교체 가능 버전 — 애님 스크립트/전투 컴포넌트는 동일하게 부착.
+	void InitDefaultComponents(const FString& SkeletalMeshFileName) override;
+
+	void BeginPlay() override;
+
+	void PostDuplicate() override;
+	void PostLoad() override;
+
+	UBattleComponent* GetBattleComponent() const { return BattleComponent; }
+	UComboComponent*  GetComboComponent()  const { return ComboComponent; }
+	UBoneAttachedStaticMeshComponent* GetWeaponComponent() const { return WeaponComponent; }
+
+	// launcher(self_launch) 발동 시 AnimNotify_MusouAttack 이 호출 — 착지까지
+	// 공중 공격이 저글 체인(AirborneJuggle)으로 진입한다. 일반 점프는 단발 점프 공격 유지.
+	void OnSelfLaunched() { bJuggleAirborne = true; }
+
+	// 피격 리액션 — GameMode::NotifyPlayerDamaged 가 호출. 평시 피격만 휘청
+	// (공격/구르기/무쌍기/공중 중엔 모션 우선으로 스킵), 쿨다운으로 스턴락 방지.
+	void PlayHitReaction();
+
+	bool IsWeaponDrawn() const { return bWeaponDrawn; }
+
+	// 무쌍기 발동 중인지 — 게이지 적립 게이팅 등에 사용 (궁극기 자체 히트로 재충전 방지).
+	bool IsUltimateActive() const { return bUltimateActive; }
+
+	// 플레이어 사망 연출 — 체력 0 시 GameMode::NotifyPlayerDeath 가 호출. 쓰러지는 몽타주를
+	// 재생하고 끝 포즈를 유지(blend-out 길게)한다. 1회만 — 재호출은 무시.
+	void PlayDeathAnimation();
+	bool IsDead() const { return bDead; }
+
+	// 입력 없는 자동 전투용(크레딧 아웃트로 등) — 좌클릭 공격과 동일 진입점.
+	// 납도 상태면 첫 호출이 발도, 이후 호출이 콤보를 이어간다.
+	void TriggerAutoAttack() { OnAttackPressed(); }
+
+	// 강제 납도 요청 — 무기가 뽑혀 있을 때만. 모션 중이면 토글이 스스로 무시하므로
+	// 매 틱 호출해도 안전(검집에 들어가면 IsWeaponDrawn()==false 가 되어 멈춘다).
+	void RequestSheathe() { if (bWeaponDrawn) { OnToggleWeaponPressed(); } }
+
+	// 궁극기 지면 강타 충격파 — 시작점에서 전방으로 Distance/Duration 동안 Pulses 개의
+	// 데미지 판정 + 검기(placeholder)를 순차 발사. AnimNotify_GroundSlamShockwave 가 호출.
+	void StartGroundSlamShockwave(const FVector& Origin, const FVector& Dir, float Distance,
+		float Duration, int32 Pulses, FName SpecId, float SlashSpeed, float SlashLife, float SlashYaw);
+
+	// 궁극기 백플립 도약 — 후방+상방 임펄스로 제자리 백플립을 실제로 빼준다. (leap notify 호출)
+	// GravityScale < 1 이면 체공을 연장 — 공중에서 다음 강타 몽타주가 돌게 한다.
+	void LaunchBackflip(float BackSpeed, float UpSpeed, float GravityScale);
+
+	// 궁극기 다음 슬롯 조기 전환 — 현재 슬롯 종료 전 cross-fade. (advance notify 호출)
+	void AdvanceUltimateNow();
+
+	// 무쌍기 락온 — 전방 최근접 적(보스 우선)의 위치를 찾는다. 발동 시 그쪽으로 facing 고정용.
+	bool FindNearestEnemyTarget(FVector& OutPos) const;
+
+	// 튜토리얼 심화 단계 감지용.
+	// 평면(XY) 속도 — 이동/대시 단계를 키가 아닌 실제 속도로 판정.
+	float GetPlanarSpeed() const;
+	// 마지막으로 재생된 공격 스텝의 AttackId(예 "jump_attack"/"jump_heavy"/"dash_attack")와
+	// 누적 재생 카운터 — "그 기술 몽타주가 실제로 발동됐는지"를 카운터 증가 + id 일치로 감지.
+	const FString& GetLastPlayedAttackId() const { return LastPlayedAttackId; }
+	uint32 GetAttackPlayCounter() const { return AttackPlayCounter; }
+
+	// ── 몽타주 카메라 샷 — AnimNotifyState_CameraShot 이 구동 ──
+	// 상시 연출 카메라 2대(핑퐁)로 메인(SpringArm) 카메라와 블렌드 전환.
+	// Token = notify 객체 — 뒷 샷이 인수하면 앞 샷의 End 가 복귀를 걸지 않게 식별.
+	void StartCameraShot(const FMusouCameraShot& Shot, const void* Token);
+	void EndCameraShot(const void* Token);
+
+	// 몽타주 카메라 샷(화면 전환) 억제 — 크레딧 아웃트로 등 고정 시점에서 자동 전투를
+	// 돌릴 때 공격 notify 의 샷 전환이 카메라를 가로채지 않도록 끈다.
+	void SetCameraShotsSuppressed(bool bSuppressed) { bSuppressCameraShots = bSuppressed; }
+
+	// 공격 시 "입력 없으면 카메라 정면으로 재조준"(SnapFacingToInput) 억제 — 크레딧 자동
+	// 전투처럼 입력/시점이 없는 상황에서 캐릭터가 엉뚱한 방향으로 휙 도는 것을 막는다.
+	void SetCameraFacingSuppressed(bool bSuppressed) { bSuppressCameraFacing = bSuppressed; }
+
+protected:
+	// 입력 binding — WASD 이동/Space 점프 + 좌클릭 콤보/우클릭 강공격.
+	// ※ 공격 입력을 lua anim에서 이관한 이유: lua update()는 Animation Tick LOD
+	//   게이트 뒤에서 돌아 스킵 프레임의 에지 입력(GetKeyDown)이 소실된다.
+	//   InputComponent는 액터 틱에서 매 프레임 처리 — 입력 누락 없음.
+	void SetupInputComponent() override;
+
+	// 콤보 단계 전진/리셋 폴링 (매 프레임).
+	void Tick(float DeltaTime) override;
+
+	// ── 공격 입력 핸들러 ──
+	void OnAttackPressed();       // 좌클릭 — 콤보 체인 시작/예약 (컨텍스트별 체인)
+	void OnHeavyAttackPressed();  // 우클릭 — 강공격 (컨텍스트별 단발 / 콤보 중엔 분기 예약)
+	void OnUltimatePressed();     // R — 무쌍기 (게이지 가득 + 지상, 진행 동작 전부 캔슬)
+	void OnDodgePressed();        // Shift — 구르기 (입력 방향, 전 구간 무적, 후딜 캔슬 가능)
+	void OnToggleWeaponPressed(); // X — 발도/납도 토글 (납도 중 공격 입력도 발도로 변환)
+
+	// 무기 상태를 무기 컴포넌트(손↔등 본)와 lua 애님 플래그("WeaponDrawn")에 동기화.
+	void ApplyWeaponState();
+
+	// 무쌍기 난무 — Tick 이 몽타주 종료를 감지해 다음 슬롯 자동 재생. 체인 소진 시 정리.
+	void UpdateUltimateChain();
+	void EndUltimate();
+
+	// 충격파 — Tick 이 펄스를 전방으로 순차 broadcast + 검기 스폰. 궁극기 몽타주와 독립.
+	void UpdateShockwave(float DeltaTime);
+	void EmitShockwavePulse(const FVector& WorldOrigin, const FVector& Dir);
+
+	// 궁극기 마무리 착지 임팩트 — 슬램 하강이 지면에 닿는 순간 1회 (히트스톱+셰이크+방사 검기+AOE).
+	void TriggerUltimateLandingImpact();
+	void EndRoll();
+
+	// 진입 컨텍스트 판정 — Falling → Airborne, XY 속도 ≥ 임계 → Moving, 그 외 Idle.
+	EAttackContext ResolveAttackContext() const;
+
+	// 공격 스텝 시작 시 이번 프레임 WASD 입력 방향으로 캡슐 yaw 즉시 회전.
+	// bDefaultToCameraForward=true 면 입력이 없을 때 카메라 정면(ControlRotation.Yaw)으로
+	// 재조준 (공격용). false 면 입력 없을 때 현재 facing 유지 (구르기/발도납도용).
+	void SnapFacingToInput(bool bDefaultToCameraForward = false);
+
+	// 몽타주에 의한 이동/점프 잠금 — 말미 MontageMoveUnlockTail 구간과 blend-out 중엔 해제
+	// (UE 의 BlendOutTriggerTime 개념 이식: 후딜 꼬리에서 컨트롤 자연 복귀).
+	bool IsMovementLockedByMontage() const;
+
+	// 잠금 해제 구간에서 이동 입력이 오면 몽타주 조기 blend-out (UE 의 recovery cancel 패턴).
+	// 콤보 전진/분기 예약이 살아 있으면 보류 — 체인이 끊기지 않게.
+	void TryMovementCancelMontage();
+
+	// 공중 콤보 행 타임 — 공중 체인 진행 중 CMC 중력을 줄여 체공 연장, 종료 시 원복.
+	// 매 Tick 호출 (feedback.air_combo.gravity_scale, lua 튜닝).
+	void UpdateAirComboHang();
+
+	// 공격 스텝 재생 — 에디터 몽타주 우선, 없으면 시퀀스에서 런타임 생성 (기본 notify 주입).
+	// bFaceCameraIfNoInput: 입력 없을 때 카메라 정면 재조준(공격). SlotName: 재생 슬롯
+	// (None=DefaultSlot 풀바디, "UpperBody"=상반신만 — 발도/납도 하체 블렌드).
+	bool          PlayAttackStep(const FMusouAttackStep& Step, bool bFaceCameraIfNoInput = false, FName SlotName = FName::None);
+	UAnimMontage* ResolveStepMontage(const FMusouAttackStep& Step);
+	void          InjectDefaultAttackNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
+
+	// 카메라 샷 notify 주입 — 공격 notify 와 별도 패스. 저작 notify 가 있는 시퀀스에도
+	// 카메라 샷은 주입한다 (저작 CameraShot notify 가 있을 때만 양보).
+	void InjectCameraShotNotifies(UAnimSequence* Sequence, const FMusouAttackStep& Step);
+
+	// ── 몽타주 카메라 샷 내부 ──
+	void EnsureCinematicCameras();          // 연출 카메라 2대 런타임 생성 (BeginPlay, 씬 비저장)
+	void UpdateCameraShot();                // look_at / 월드 고정 유지 + 안전망 (Tick)
+	void AimShotCamera();                   // 활성 샷 카메라 시선/위치 갱신
+	APlayerCameraManager* GetLocalCameraManager() const;
+
+	// 슬롯에서 변주 1개 선택 — 랜덤 + 직전 변주 반복 회피. 빈 슬롯이면 nullptr.
+	const FMusouAttackStep* PickVariant(const FMusouAttackSlot& Slot);
+	bool PlayAttackSlot(const FMusouAttackSlot& Slot, bool bFaceCameraIfNoInput = false, FName SlotName = FName::None);   // PickVariant → PlayAttackStep
+
+	void PlayComboStep(int32 Step);
+	void PlayBranchFinisher(int32 BranchStep);  // 콤보 N단 분기 피니셔 (무쌍 차지어택식)
+	bool IsAnyMontagePlaying() const;
+	bool IsFalling() const;
+
+	// 공중 저글 콤보 진행 중 — launcher 로 떠오른 뒤 착지 전까지(스텝 사이 공백/행 타임 포함).
+	// 이 구간엔 WASD 공중 제어를 막아 콤보가 옆으로 흘러가지 않게 한다.
+	bool IsInAirCombo() const;
+
+	UBattleComponent* BattleComponent = nullptr;
+	UComboComponent*  ComboComponent  = nullptr;
+	UBoneAttachedStaticMeshComponent* WeaponComponent = nullptr;  // 오른손(hand_r) 무기 슬롯
+
+	UPROPERTY(Edit, Save, Category = "Combat|FX")
+	UHitFlashComponent* HitFlashComponent = nullptr;
+
+	// 이동 중 공격 판정 임계 (m/s, XY) — MaxWalkSpeed 6.0 의 1/3 기준.
+	UPROPERTY(Edit, Save, Category = "Combat", DisplayName = "Moving Attack Speed Threshold", Min=0.0f, Max=10.0f, Speed=0.1f)
+	float MovingAttackSpeedThreshold = 2.0f;
+
+	// 몽타주 말미에서 이동 잠금이 풀리는 여유 시간 (초) — 0 이면 끝까지 잠금.
+	UPROPERTY(Edit, Save, Category = "Combat", DisplayName = "Montage Move Unlock Tail", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float MontageMoveUnlockTail = 0.4f;
+
+	// 콤보 시작 시점에 고정되는 활성 체인 컨텍스트 — 진행 중 컨텍스트 변화에 영향받지 않음.
+	EAttackContext ActiveChainContext = EAttackContext::Idle;
+
+	// 마지막 재생 공격 스텝 식별 — 튜토리얼이 "그 기술이 실제로 발동됐는지" 감지.
+	FString LastPlayedAttackId;
+	uint32  AttackPlayCounter = 0;  // PlayAttackStep 마다 +1 (재생 발생 감지용)
+
+	// 이번 프레임 WASD 입력의 월드 방향 (카메라 yaw 기준). 축 바인딩이 매 프레임 재구축 —
+	// 공격 시작 회전 스냅(SnapFacingToInput)의 입력 소스. 입력 없으면 영벡터.
+	FVector MoveInputThisFrame = FVector(0.0f, 0.0f, 0.0f);
+
+	// 런타임 fallback 몽타주 캐시 (시퀀스 경로 → 생성 몽타주). 에디터 저작 몽타주가
+	// 없을 때만 채워짐 — 액터 수명과 함께 정리.
+	TArray<std::pair<FString, UAnimMontage*>> RuntimeAttackMontages;
+
+	// notify 주입 이력 (시퀀스 → 주입 시점의 attack_data 버전). 핫리로드로 버전이
+	// 바뀌면 Auto* notify 를 걷어내고 새 값으로 재주입 — 라이브 타이밍 튜닝용.
+	TArray<std::pair<UAnimSequence*, int32>> InjectedSequenceVersions;
+
+	// 슬롯별 직전 변주 인덱스 (같은 모션 연속 재생 회피). key = 슬롯 주소 —
+	// 데이터 핫리로드로 슬롯이 재구성되면 자연히 미스나서 새로 기록된다.
+	TArray<std::pair<const void*, int32>> LastVariantPick;
+
+	// 공중 콤보 행 타임 상태 — 적용 중이면 SavedGravity 로 원복해야 한다.
+	bool  bAirComboHangActive = false;
+	float SavedGravity = 9.8f;
+
+	// launcher 로 떠오른 상태 — 공중 공격이 저글 체인으로 진입. 착지 시 해제 (Tick).
+	bool  bJuggleAirborne = false;
+
+	// 사망 — 사망 연출 1회 재생 후 고정. 추가 입력/연출 갱신 차단.
+	bool  bDead = false;
+
+	// 무쌍기 난무 상태 — 활성 동안 무적 + 슬롯 순차 자동 재생 (UltimateStep = 다음 인덱스).
+	bool  bUltimateActive = false;
+	int32 UltimateStep = 0;
+
+	// 궁극기 종료 시 슬램 하강 예약 — 지면에 닿는 순간 Tick 이 착지 임팩트를 1회 발동.
+	bool  bUltimateLandingPending = false;
+
+	// 충격파가 깔릴 지면 높이(Z) — 발동 시점에 캡처. 강타 때 캐릭터가 공중에 떠 있어도
+	// 검기/판정은 이 Z(지면 또는 타겟 높이)에서 진행해야 지상 적을 때린다.
+	float UltimateWaveZ = 0.0f;
+
+	// 전방 진행 충격파 상태 — Tick 이 펄스를 순차 발사. 궁극기 몽타주 종료와 무관하게 진행.
+	struct FShockwaveRun
+	{
+		bool    bActive   = false;
+		FVector StartPos  = FVector(0.0f, 0.0f, 0.0f);
+		FVector Dir       = FVector(1.0f, 0.0f, 0.0f);
+		float   Distance  = 12.0f;
+		float   Duration  = 0.7f;
+		float   Elapsed   = 0.0f;
+		int32   Pulses    = 8;
+		int32   NextPulse = 0;
+		FName   SpecId;
+		float   SlashSpeed = 9.0f;
+		float   SlashLife  = 0.45f;
+		float   SlashYaw   = 90.0f;
+	};
+	FShockwaveRun ShockwaveRun;
+
+	// 구르기 상태 — 활성 동안 무적. 몽타주 종료 시 해제 (Tick).
+	bool  bRolling = false;
+
+	// 피격 리액션 쿨다운 잔여 (초) — 군체 다단 히트 스턴락 방지 (feedback.hit_react.cooldown).
+	float HitReactCooldownRemaining = 0.0f;
+
+	// 무기 상태 — false = 납도(등에 멘 상태, 시작 기본값). 납도 중 공격 입력은 발도로 변환.
+	bool  bWeaponDrawn = false;
+
+	// 발도/납도 모션 중간 본 스왑 대기 (초, 음수 = 없음). Tick 이 카운트다운 후 적용 —
+	// 손이 등에 닿는 타이밍(feedback.weapon.swap_frac)에 무기가 손↔등으로 옮겨진다.
+	float WeaponSwapDelay = -1.0f;
+	bool  bPendingWeaponDrawn = false;
+
+	// ── 몽타주 카메라 샷 상태 ──
+	// 연출 카메라 2대 — BeginPlay 런타임 생성 (씬 비저장, 캡슐에 부착). 핑퐁으로
+	// 샷1→샷2 연속 컷에서도 블렌드 source/target 이 항상 다른 컴포넌트가 된다.
+	UCineCameraComponent* CineCamA = nullptr;
+	UCineCameraComponent* CineCamB = nullptr;
+
+	const void*           ActiveShotToken = nullptr;  // 진행 중 샷의 notify 객체 (null = 없음)
+	UCineCameraComponent* ActiveShotCam   = nullptr;  // 직전/현재 샷 카메라 — 핑퐁 판단용
+	FMusouCameraShot      ActiveShot;
+	FVector               ShotWorldLock = FVector(0.0f, 0.0f, 0.0f);  // bFollow=false 샷의 고정 월드 위치
+	float                 ShotYaw = 0.0f;  // 샷 시작 시 동결한 프레이밍 yaw — 위치/시선을 이 값 기준
+	                                        // 월드 구동해 공격 중 캡슐 yaw 스냅과 디커플(카메라 튐 제거)
+	bool                  bSuppressCameraShots = false;  // true 면 StartCameraShot 무시 (크레딧 고정 시점)
+	bool                  bSuppressCameraFacing = false; // true 면 공격 시 카메라 정면 재조준 스냅 끔
+
+	// 카메라 샷 주입 이력 (시퀀스 → 데이터 버전) — 공격 notify 주입과 별도 추적
+	// (가드 조건이 달라 같은 시퀀스라도 주입 가능 여부가 다르다).
+	TArray<std::pair<UAnimSequence*, int32>> CameraShotInjectedVersions;
+};

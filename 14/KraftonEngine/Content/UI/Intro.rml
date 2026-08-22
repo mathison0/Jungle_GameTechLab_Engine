@@ -1,0 +1,774 @@
+<rml>
+<head>
+	<title>Intro</title>
+	<style>
+		body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			background-color: #050505;
+			font-family: "HeirofLight";
+			font-weight: bold;
+		}
+
+		#intro-root {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+
+		#intro-background {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		#menu-buttons {
+			position: absolute;
+			left: 20%;
+			top: 52%;
+			display: block;
+			width: 24%;
+		}
+
+		.menu-button {
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 70px;
+			padding: 0;
+			margin-top: 16px;
+			border-width: 0;
+			background-color: transparent;
+			color: #f2e2c8;
+			font-size: 26px;
+			line-height: 70px;
+			text-align: center;
+		}
+
+		.secondary-button {
+			width: 100%;
+			height: 76px;
+			font-size: 24px;
+			line-height: 76px;
+		}
+
+		.button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.button-frame-hover {
+			display: none;
+		}
+
+		.button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 76px;
+			line-height: 76px;
+			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		.menu-button.selected .button-frame-normal {
+			display: none;
+		}
+
+		.menu-button.selected .button-frame-hover {
+			display: block;
+		}
+
+		.menu-button.selected .button-label {
+			color: #fff1b0;
+		}
+
+		/* 우측 상단 유틸 버튼 — 설정 / 조작 안내 (뒷배경 글자를 가리지 않게 메인 메뉴에서 분리). */
+		#corner-buttons {
+			position: absolute;
+			right: 28px;
+			top: 26px;
+			display: block;
+			width: 196px;
+		}
+
+		.corner-button {
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 56px;
+			line-height: 56px;
+			margin-bottom: 10px;
+			padding: 0;
+			text-align: center;
+			font-size: 22px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.corner-button .button-label {
+			line-height: 56px;
+			height: 56px;
+		}
+
+		.corner-button:hover .button-frame-normal {
+			display: none;
+		}
+
+		.corner-button:hover .button-frame-hover {
+			display: block;
+		}
+
+		.corner-button:hover .button-label {
+			color: #fff1b0;
+		}
+
+		#audio-settings-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#audio-settings-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -220px;
+			margin-top: -235px;
+			display: block;
+			width: 440px;
+			height: 470px;
+			background-color: #080202d8;
+			color: #f8f3df;
+		}
+
+		#camera-direction-row, #camera-shake-row {
+			display: block;
+			width: 440px;
+			margin-top: 14px;
+		}
+
+		/* 설정 토글 — 패널(440)을 넘지 않게 컴팩트 + 가운데 정렬. */
+		#camera-direction-toggle, #camera-shake-toggle {
+			position: relative;
+			display: block;
+			width: 300px;
+			height: 54px;
+			line-height: 54px;
+			margin-left: 70px;
+			margin-top: 0;
+			padding: 0;
+			text-align: center;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		#camera-direction-label, #camera-shake-label {
+			line-height: 54px;
+			height: 54px;
+			font-size: 20px;
+		}
+
+		#camera-direction-toggle:hover .button-frame-normal,
+		#camera-shake-toggle:hover .button-frame-normal { display: none; }
+		#camera-direction-toggle:hover .button-frame-hover,
+		#camera-shake-toggle:hover .button-frame-hover { display: block; }
+		#camera-direction-toggle:hover .button-label,
+		#camera-shake-toggle:hover .button-label { color: #fff1b0; }
+
+		#audio-settings-title {
+			display: block;
+			width: 440px;
+			height: 56px;
+			line-height: 56px;
+			margin-top: 18px;
+			text-align: center;
+			font-size: 34px;
+			color: #f0d36a;
+		}
+
+		#audio-settings-row {
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 440px;
+			height: 72px;
+			margin-top: 28px;
+		}
+
+		.audio-step-button {
+			position: relative;
+			display: block;
+			width: 64px;
+			height: 56px;
+			line-height: 56px;
+			text-align: center;
+			font-size: 34px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.audio-step-button:hover .button-frame-normal {
+			display: none;
+		}
+
+		.audio-step-button:hover .button-frame-hover {
+			display: block;
+		}
+
+		.audio-step-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 64px;
+			height: 56px;
+			line-height: 56px;
+			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		#audio-settings-meter {
+			display: block;
+			width: 220px;
+			height: 56px;
+			margin-left: 20px;
+			margin-right: 20px;
+		}
+
+		#bgm-volume-label {
+			display: block;
+			width: 220px;
+			height: 26px;
+			line-height: 26px;
+			text-align: center;
+			font-size: 22px;
+			color: #f8f3df;
+		}
+
+		#bgm-volume-bar {
+			display: block;
+			width: 220px;
+			height: 18px;
+			margin-top: 10px;
+			background-color: #49494959;
+			border-width: 1px;
+			border-color: #f0d36a;
+		}
+
+		#bgm-volume-bar fill {
+			background-color: #f0d36a;
+		}
+
+		#audio-settings-close-button {
+			margin-left: 100px;
+			margin-top: 28px;
+			width: 240px;
+		}
+
+		@keyframes keyguide-in {
+			from { opacity: 0; transform: translateY(48px); }
+			to   { opacity: 1; transform: translateY(0px); }
+		}
+
+		#keyguide-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508c8;
+		}
+
+		#keyguide-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -310px;
+			margin-top: -290px;
+			display: block;
+			width: 620px;
+			height: 580px;
+			padding: 30px;
+			background-color: #080202e6;
+			border-width: 2px;
+			border-color: #6b5a2e;
+			color: #f8f3df;
+			animation: keyguide-in 0.35s ease-out;
+		}
+
+		#keyguide-title {
+			display: block;
+			width: 620px;
+			height: 52px;
+			line-height: 52px;
+			margin-bottom: 14px;
+			text-align: center;
+			font-size: 36px;
+			color: #f0d36a;
+		}
+
+		.keyguide-row {
+			display: flex;
+			align-items: center;
+			width: 620px;
+			height: 44px;
+			margin-bottom: 8px;
+		}
+
+		.keyguide-key {
+			display: block;
+			width: 180px;
+			height: 40px;
+			line-height: 40px;
+			margin-right: 28px;
+			text-align: center;
+			font-size: 21px;
+			color: #17130c;
+			background-color: #f0d36a;
+			border-width: 1px;
+			border-color: #b89a3c;
+		}
+
+		.keyguide-desc {
+			display: block;
+			height: 40px;
+			line-height: 40px;
+			font-size: 24px;
+			color: #f8f3df;
+		}
+
+		#keyguide-close-button {
+			margin-left: 190px;
+			margin-top: 22px;
+			width: 240px;
+		}
+
+		#scoreboard-overlay-host {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		#scoreboard-overlay {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: none;
+			width: 100%;
+			height: 100%;
+			background-color: #030508a3;
+		}
+
+		#scoreboard-panel {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -370px;
+			margin-top: -300px;
+			display: block;
+			width: 700px;
+			height: 560px;
+			padding: 20px;
+			background-color: #080202a8;
+			border-width: 0;
+			color: #f8f3df;
+		}
+
+		#scoreboard-panel-bg {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 740px;
+			height: 600px;
+			opacity: 0.78;
+			z-index: 0;
+			pointer-events: none;
+		}
+
+		#scoreboard-title {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 700px;
+			height: 36px;
+			line-height: 36px;
+			font-size: 34px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		#scoreboard-input-row {
+			position: relative;
+			z-index: 1;
+			display: none;
+		}
+
+		#scoreboard-save-status {
+			position: relative;
+			z-index: 1;
+			display: none;
+		}
+
+		#scoreboard-save-button {
+			position: relative;
+			display: block;
+			width: 78px;
+			height: 40px;
+			line-height: 40px;
+			margin-left: 18px;
+			padding: 0;
+			text-align: center;
+			font-size: 22px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.scoreboard-save-button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.scoreboard-save-button-frame-hover {
+			display: none;
+		}
+
+		.scoreboard-save-button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 100%;
+			line-height: 40px;
+			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-frame-normal {
+			display: none;
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-frame-hover {
+			display: block;
+		}
+
+		#scoreboard-save-button:hover .scoreboard-save-button-label {
+			color: #fff1b0;
+		}
+
+		#scoreboard-list {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 700px;
+			height: 360px;
+			margin-top: 14px;
+			overflow: hidden;
+		}
+
+		.scoreboard-row {
+			position: relative;
+			display: block;
+			width: 700px;
+			height: 34px;
+			margin-bottom: 2px;
+			background-color: #f8f3df14;
+		}
+
+		.scoreboard-rank {
+			position: absolute;
+			left: 10px;
+			top: 0;
+			width: 42px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			text-align: center;
+			color: #f0d36a;
+		}
+
+		.scoreboard-name {
+			position: absolute;
+			left: 64px;
+			top: 0;
+			width: 170px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 20px;
+			color: #f8f3df;
+		}
+
+		.scoreboard-entry-score {
+			position: absolute;
+			left: 248px;
+			top: 0;
+			width: 130px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 22px;
+			text-align: right;
+			color: #ffffff;
+		}
+
+		.scoreboard-entry-details {
+			position: absolute;
+			left: 396px;
+			top: 0;
+			width: 290px;
+			height: 34px;
+			line-height: 34px;
+			font-size: 16px;
+			text-align: right;
+			color: #d6ccb1;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		.scoreboard-empty {
+			display: block;
+			width: 700px;
+			height: 180px;
+			line-height: 180px;
+			font-size: 24px;
+			text-align: center;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-pager {
+			position: relative;
+			z-index: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 700px;
+			height: 34px;
+			margin-top: 10px;
+		}
+
+		.scoreboard-page-button {
+			display: block;
+			width: 38px;
+			height: 30px;
+			line-height: 30px;
+			margin-left: 8px;
+			margin-right: 8px;
+			text-align: center;
+			font-size: 24px;
+			background-color: #f0d36a2e;
+			color: #f0d36a;
+			border-width: 1px;
+			border-color: #f0d36a;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		.scoreboard-page-button:hover {
+			background-color: #f0d36a;
+			color: #17130c;
+		}
+
+		.scoreboard-page-button.disabled,
+		.scoreboard-page-button.disabled:hover {
+			background-color: #f8f3df0a;
+			color: #6f6858;
+			border-color: #6f6858;
+		}
+
+		#scoreboard-page-label {
+			display: block;
+			width: 80px;
+			height: 30px;
+			line-height: 30px;
+			text-align: center;
+			font-size: 18px;
+			color: #d6ccb1;
+		}
+
+		#scoreboard-close-button {
+			position: relative;
+			z-index: 1;
+			display: block;
+			width: 180px;
+			height: 50px;
+			line-height: 50px;
+			margin-left: 260px;
+			margin-top: 18px;
+			padding: 0;
+			text-align: center;
+			font-size: 24px;
+			background-color: transparent;
+			color: #f2e2c8;
+			border-width: 0;
+		}
+
+		.scoreboard-close-button-frame {
+			position: absolute;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		.scoreboard-close-button-frame-hover {
+			display: none;
+		}
+
+		.scoreboard-close-button-label {
+			position: absolute;
+			left: 0;
+			top: 0;
+			display: block;
+			width: 100%;
+			height: 100%;
+			line-height: 50px;
+			text-align: center;
+			font-effect: glow(1px 3px 2px 2px #080202cc);
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-frame-normal {
+			display: none;
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-frame-hover {
+			display: block;
+		}
+
+		#scoreboard-close-button:hover .scoreboard-close-button-label {
+			color: #fff1b0;
+		}
+
+		#victory-menu {
+			position: relative;
+			z-index: 1;
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div id="intro-root">
+		<img id="intro-background" src="JungleMusou_Title.png" />
+		<div id="menu-buttons">
+			<div id="start-button" class="menu-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">전투 참가</div>
+			</div>
+			<div id="tutorial-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">튜토리얼</div>
+			</div>
+			<div id="score-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">스코어 보드</div>
+			</div>
+			<div id="credits-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">크레딧</div>
+			</div>
+			<div id="exit-button" class="menu-button secondary-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">게임 종료</div>
+			</div>
+		</div>
+		<div id="corner-buttons">
+			<div id="settings-button" class="corner-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">설정</div>
+			</div>
+			<div id="controls-button" class="corner-button">
+				<img class="button-frame button-frame-normal" src="btn_normal.png" />
+				<img class="button-frame button-frame-hover" src="btn_hover.png" />
+				<div class="button-label">조작 안내</div>
+			</div>
+		</div>
+		<div id="audio-settings-overlay">
+			<div id="audio-settings-panel">
+				<div id="audio-settings-title">설정</div>
+				<div id="audio-settings-row">
+					<div id="bgm-volume-down-button" class="audio-step-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div class="audio-step-label">-</div>
+					</div>
+					<div id="audio-settings-meter">
+						<div id="bgm-volume-label">BGM 60%</div>
+						<progress id="bgm-volume-bar" value="0.6"></progress>
+					</div>
+					<div id="bgm-volume-up-button" class="audio-step-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div class="audio-step-label">+</div>
+					</div>
+				</div>
+				<div id="camera-direction-row">
+					<div id="camera-direction-toggle" class="menu-button secondary-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div id="camera-direction-label" class="button-label">카메라 연출: ON</div>
+					</div>
+				</div>
+				<div id="camera-shake-row">
+					<div id="camera-shake-toggle" class="menu-button secondary-button">
+						<img class="button-frame button-frame-normal" src="btn_normal.png" />
+						<img class="button-frame button-frame-hover" src="btn_hover.png" />
+						<div id="camera-shake-label" class="button-label">카메라 셰이크: ON</div>
+					</div>
+				</div>
+				<div id="audio-settings-close-button" class="menu-button secondary-button">
+					<img class="button-frame button-frame-normal" src="btn_normal.png" />
+					<img class="button-frame button-frame-hover" src="btn_hover.png" />
+					<div class="button-label">뒤로</div>
+				</div>
+			</div>
+		</div>
+		<div id="keyguide-overlay">
+			<div id="keyguide-panel">
+				<div id="keyguide-title">조작 안내</div>
+				<div class="keyguide-row"><div class="keyguide-key">W A S D</div><div class="keyguide-desc">이동</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">마우스</div><div class="keyguide-desc">시점 회전</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">좌클릭</div><div class="keyguide-desc">공격 (콤보)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">우클릭</div><div class="keyguide-desc">강공격 / 콤보 분기</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">Space</div><div class="keyguide-desc">점프</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">Shift</div><div class="keyguide-desc">구르기 (회피 · 무적)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">R</div><div class="keyguide-desc">무쌍기 (게이지 가득 시)</div></div>
+				<div class="keyguide-row"><div class="keyguide-key">X</div><div class="keyguide-desc">발도 / 납도</div></div>
+				<div id="keyguide-close-button" class="menu-button secondary-button">
+					<img class="button-frame button-frame-normal" src="btn_normal.png" />
+					<img class="button-frame button-frame-hover" src="btn_hover.png" />
+					<div class="button-label">뒤로</div>
+				</div>
+			</div>
+		</div>
+		<div id="scoreboard-overlay-host"></div>
+	</div>
+</body>
+</rml>

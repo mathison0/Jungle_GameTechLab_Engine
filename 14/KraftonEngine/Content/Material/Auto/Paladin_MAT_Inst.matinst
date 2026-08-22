@@ -1,0 +1,22 @@
+{
+        "BlendState" : "Opaque",
+        "DepthStencilState" : "Default",
+        "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+        "EmissiveIntensity" : 0.000000,
+        "Parameters" : {
+
+        },
+        "ParentMaterial" : "Content/Material/Auto/Paladin_MAT.mat",
+        "PathFileName" : "Content/Material/Auto/Paladin_MAT_Inst.matinst",
+        "RasterizerState" : "SolidBackCull",
+        "RenderPass" : "Opaque",
+        "ShaderPath" : null,
+        "ShadowMode" : "Opaque",
+        "Textures" : {
+          "DiffuseTexture" : "Content/Data/GameJam/Melee/Melee.fbm/Paladin_Ally_diffuse.png"
+        },
+        "bEnableBloom" : false,
+        "bOverrideEmissiveColor" : false,
+        "bOverrideEmissiveIntensity" : false,
+        "bOverrideEnableBloom" : false
+      }

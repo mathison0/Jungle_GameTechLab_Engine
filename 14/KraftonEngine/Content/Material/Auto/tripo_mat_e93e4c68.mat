@@ -1,0 +1,21 @@
+{
+  "BlendState" : "Opaque",
+  "DepthStencilState" : "Default",
+  "EmissiveColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+  "EmissiveIntensity" : 0.000000,
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 0.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Content/Material/Auto/tripo_mat_e93e4c68.mat",
+  "RasterizerState" : "SolidBackCull",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "ShadowMode" : "Opaque",
+  "Textures" : {
+    "DiffuseTexture" : "Content/Texture/Auto/tripo_convert_e93e4c68-cf99-4f21-8f87-dcf4106459fb/fallenangeldemonknight3dmodel_basecolor.JPEG"
+  },
+  "bEnableBloom" : false
+}
