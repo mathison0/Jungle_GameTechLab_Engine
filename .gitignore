@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Build output
+[Bb]uild/
+[Bb]in/
+[Oo]bj/
+out/
+cmake-build-*/
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Ll]ogs/
+[Uu]serSettings/
+*.csproj
+*.sln
+
+# Unreal
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Misc
+node_modules/
+*.log
