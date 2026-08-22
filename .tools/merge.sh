@@ -25,10 +25,12 @@ place_slides() {
   local wk="$1"
   [ -d "_slides/$wk" ] || return 0
   local n; n=$(ls -A "_slides/$wk"); [ -n "$n" ] || return 0
-  mkdir -p "$wk/docs"
-  mv "_slides/$wk"/* "$wk/docs"/
+  local dest="$wk/docs"
+  [ -d "$wk/Docs" ] && dest="$wk/Docs"   # Windows 케이스 무시 FS: 기존 Docs/ 재사용
+  mkdir -p "$dest"
+  mv "_slides/$wk"/* "$dest"/
   rmdir "_slides/$wk" 2>/dev/null
-  git add "$wk/docs"
+  git add "$dest"
   git commit -q -m "docs($wk): 발표자료 추가" && echo "    slides -> $wk/docs"
 }
 
@@ -68,6 +70,13 @@ while read -r wk url branch; do
   echo "[$wk] clone  $url ($branch)"
   if ! git clone --quiet --no-local --branch "$branch" --single-branch "$url" "$work"; then
     echo "  !! [$wk] clone 실패"; fail=1; continue
+  fi
+
+  if [ -n "$(git -C "$work" lfs ls-files 2>/dev/null | head -1)" ]; then
+    echo "[$wk] LFS 감지 — 포인터를 실제 파일로 변환"
+    if ! git -C "$work" lfs migrate export --everything --include='*' --yes; then
+      echo "  !! [$wk] lfs export 실패"; fail=1; rm -rf "$work"; continue
+    fi
   fi
 
   echo "[$wk] filter (blob>$MAX_BLOB, 빌드 산출물 제거)"
