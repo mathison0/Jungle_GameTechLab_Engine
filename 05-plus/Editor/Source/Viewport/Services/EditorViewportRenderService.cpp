@@ -1,0 +1,209 @@
+#include "Viewport/Services/EditorViewportRenderService.h"
+
+#include "EditorEngine.h"
+#include "Viewport/EditorViewportRegistry.h"
+#include "Actor/Actor.h"
+#include "Core/Engine.h"
+#include "Gizmo/Gizmo.h"
+#include "Math/Frustum.h"
+#include "Renderer/Material.h"
+#include "Renderer/Renderer.h"
+#include "Scene/Scene.h"
+#include "UI/EditorUI.h"
+#include "Viewport/BlitRenderer.h"
+#include "Viewport/Viewport.h"
+#include "Component/SkyComponent.h"
+#include "Component/StaticMeshComponent.h"
+#include "Asset/ObjManager.h"
+#include "Slate/Widget/Painter.h"
+#include "World/World.h"
+#include "Component/CameraComponent.h"
+#include "Camera/Camera.h"
+#include "Component/SceneComponent.h"
+
+
+namespace
+{
+	void BuildGridVectors(const FRenderCommandQueue& Queue, const FViewportLocalState& LocalState, FVector& OutGridAxisU, FVector& OutGridAxisV, FVector& OutViewForward)
+	{
+		const FMatrix ViewInverse = Queue.ViewMatrix.GetInverse();
+		OutViewForward = ViewInverse.GetForwardVector().GetSafeNormal();
+
+		if (LocalState.ProjectionType == EViewportType::Perspective)
+		{
+			OutGridAxisU = FVector::ForwardVector;
+			OutGridAxisV = FVector::RightVector;
+			return;
+		}
+
+		OutGridAxisU = ViewInverse.GetRightVector().GetSafeNormal();
+		OutGridAxisV = ViewInverse.GetUpVector().GetSafeNormal();
+	}
+}
+
+
+void FEditorViewportRenderService::RenderAll(
+	FEngine* Engine,
+	FRenderer* Renderer,
+	FEditorEngine* EditorEngine,
+	FEditorViewportRegistry& ViewportRegistry,
+	FEditorUI& EditorUI,
+	FGizmo& Gizmo,
+	FBlitRenderer& BlitRenderer,
+	const std::shared_ptr<FMaterial>& WireFrameMaterial,
+	FRenderMesh* GridMesh,
+	FMaterial* GridMaterial,
+	const FBuildRenderCommands& BuildRenderCommands) const
+{
+	if (!Engine || !Renderer || !EditorEngine)
+	{
+		return;
+	}
+
+	ID3D11Device* Device = Renderer->GetDevice();
+	ID3D11DeviceContext* Context = Renderer->GetDeviceContext();
+	if (!Device || !Context)
+	{
+		return;
+	}
+
+	UScene* Scene = Engine->GetScene();
+	if (!Scene)
+	{
+		return;
+	}
+
+	constexpr float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	const TArray<FViewportEntry>& Entries = ViewportRegistry.GetEntries();
+
+	for (const FViewportEntry& Entry : Entries)
+	{
+		if (!Entry.bActive || !Entry.Viewport)
+		{
+			continue;
+		}
+
+		Entry.Viewport->EnsureResources(Device);
+
+		ID3D11RenderTargetView* RTV = Entry.Viewport->GetRTV();
+		ID3D11DepthStencilView* DSV = Entry.Viewport->GetDSV();
+		if (!RTV || !DSV)
+		{
+			continue;
+		}
+
+		const FRect& Rect = Entry.Viewport->GetRect();
+		D3D11_VIEWPORT Viewport = {};
+		Viewport.TopLeftX = 0.0f;
+		Viewport.TopLeftY = 0.0f;
+		Viewport.Width = static_cast<float>(Rect.Width);
+		Viewport.Height = static_cast<float>(Rect.Height);
+		Viewport.MinDepth = 0.0f;
+		Viewport.MaxDepth = 1.0f;
+
+		Context->ClearRenderTargetView(RTV, ClearColor);
+		Context->ClearDepthStencilView(DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+		Renderer->BeginScenePass(RTV, DSV, Viewport);
+
+		const float AspectRatio = static_cast<float>(Rect.Width) / static_cast<float>(Rect.Height);
+		FRenderCommandQueue Queue;
+		Queue.Reserve(Renderer->GetPrevCommandCount());
+
+		// PIE 활성 중에는 PIE 월드의 활성 카메라 행렬을 사용한다.
+		if (EditorEngine->IsPIEActive())
+		{
+			if (UWorld* PIEWorld = EditorEngine->GetActiveWorld())
+			{
+				if (UCameraComponent* PIECam = PIEWorld->GetActiveCameraComponent())
+				{
+					PIECam->GetCamera()->SetAspectRatio(AspectRatio);
+					Queue.ViewMatrix       = PIECam->GetViewMatrix();
+					Queue.ProjectionMatrix = PIECam->GetProjectionMatrix();
+				}
+			}
+		}
+		else
+		{
+			Queue.ProjectionMatrix = Entry.LocalState.BuildProjMatrix(AspectRatio);
+			Queue.ViewMatrix       = Entry.LocalState.BuildViewMatrix();
+		}
+
+		FFrustum Frustum;
+		Frustum.ExtractFromVP(Queue.ViewMatrix * Queue.ProjectionMatrix);
+		const FVector CameraPosition = Queue.ViewMatrix.GetInverse().GetTranslation();
+		BuildRenderCommands(Engine, Scene, Frustum, Entry.LocalState.ShowFlags, CameraPosition, Queue);
+
+		const bool bPIE = EditorEngine->IsPIEActive();
+
+		if (!bPIE)
+		{
+			AActor* GizmoActor = EditorEngine->GetSelectedActor();
+			USceneComponent* GizmoTarget = EditorEngine->GetTransformTargetComponent();
+			if (GizmoActor && GizmoActor->GetComponentByClass<USkyComponent>() == nullptr)
+			{
+				Gizmo.BuildRenderCommands(GizmoActor, GizmoTarget, &Entry, Queue);
+			}
+		}
+
+		if (Entry.LocalState.ViewMode == ERenderMode::Wireframe && WireFrameMaterial)
+		{
+			ApplyWireframe(Queue, WireFrameMaterial.get());
+		}
+
+		if (!bPIE && Entry.LocalState.bShowGrid && GridMesh && GridMaterial)
+		{
+			FVector GridAxisU = FVector::ForwardVector;
+			FVector GridAxisV = FVector::RightVector;
+			FVector ViewForward = FVector::ForwardVector;
+			BuildGridVectors(Queue, Entry.LocalState, GridAxisU, GridAxisV, ViewForward);
+
+			GridMaterial->SetParameterData("GridSize", &Entry.LocalState.GridSize, 4);
+			GridMaterial->SetParameterData("LineThickness", &Entry.LocalState.LineThickness, 4);
+			GridMaterial->SetParameterData("GridAxisU", &GridAxisU, sizeof(FVector));
+			GridMaterial->SetParameterData("GridAxisV", &GridAxisV, sizeof(FVector));
+			GridMaterial->SetParameterData("ViewForward", &ViewForward, sizeof(FVector));
+
+			FRenderCommand GridCommand;
+			GridCommand.RenderMesh = GridMesh;
+			GridCommand.Material = GridMaterial;
+			GridCommand.WorldMatrix = FMatrix::Identity;
+			GridCommand.RenderLayer = ERenderLayer::Default;
+			Queue.AddCommand(GridCommand);
+		}
+
+		Renderer->SubmitCommands(Queue);
+		Renderer->ExecuteCommands();
+		EditorEngine->FlushDebugDrawForViewport(Renderer, Entry.LocalState.ShowFlags, false);
+		Renderer->EndScenePass();
+	}
+	EditorEngine->ClearDebugDrawForFrame();
+
+	Renderer->BindSwapChainRTV();
+	BlitRenderer.BlitAll(Context, Entries);
+
+	Renderer->BindSwapChainRTV();
+	if (FSlateApplication* Slate = EditorEngine->GetSlateApplication())
+	{
+		FPainter Painter(Renderer);
+
+		RECT rc{};
+		::GetClientRect(Renderer->GetHwnd(), &rc);
+		Painter.SetScreenSize(rc.right - rc.left, rc.bottom - rc.top);
+		Slate->Paint(Painter);
+		Painter.Flush();
+	}
+
+	EditorUI.Render();
+}
+
+void FEditorViewportRenderService::ApplyWireframe(FRenderCommandQueue& Queue, FMaterial* WireMaterial)
+{
+	for (FRenderCommand& Command : Queue.Commands)
+	{
+		if (Command.RenderLayer != ERenderLayer::Overlay)
+		{
+			Command.Material = WireMaterial;
+		}
+	}
+}

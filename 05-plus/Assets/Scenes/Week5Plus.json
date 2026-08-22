@@ -1,0 +1,200 @@
+{
+  "Materials": [
+    "Assets/Materials/M_Water.json",
+    "Assets/Materials/M_BlueColor.json",
+    "Assets/Materials/M_Gizmos.json",
+    "Assets/Materials/M_GreenColor.json",
+    "Assets/Materials/M_Wireframe.json",
+    "Assets/Materials/M_RedColor.json",
+    "Assets/Materials/M_Sky.json",
+    "Assets/Materials/M_TintYellow.json"
+  ],
+  "NextUUID": 168,
+  "PerspectiveCamera": {
+    "FOV": 60.0,
+    "FarClip": 10000.0,
+    "Location": [
+      -6.50941801071167,
+      -6.581776142120361,
+      2.6737520694732666
+    ],
+    "NearClip": 0.0010000000474974513,
+    "Rotation": [
+      -19.800006866455078,
+      37.79999542236328,
+      0.0
+    ]
+  },
+  "Primitives": {
+    "0": {
+      "Class": "APlayerStart",
+      "Components": [
+        {
+          "ArrowColor": [
+            0.44999998807907104,
+            1.0,
+            0.3499999940395355,
+            1.0
+          ],
+          "ArrowHeadLength": 0.2800000011920929,
+          "ArrowHeadSize": 0.14000000059604645,
+          "ArrowLength": 1.0,
+          "AttachParentUUID": 0,
+          "Class": "UArrowComponent",
+          "Location": [
+            -2.309673309326172,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            0.0,
+            31.999990463256836,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 20
+        },
+        {
+          "AttachParentUUID": 20,
+          "Class": "UBillboardComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ScreenSize": 0.0024999999441206455,
+          "ScreenSizeScaled": false,
+          "Size": [
+            0.5,
+            0.5,
+            0.0
+          ],
+          "Sprite": "Editor\\Icons\\Pawn_64x.png",
+          "TintColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 21
+        },
+        {
+          "AlwaysFaceCamera": true,
+          "AttachParentUUID": 20,
+          "Class": "UUUIDTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 23,
+          "WorldSize": 0.30000001192092896
+        }
+      ],
+      "RootComponentUUID": 20,
+      "UUID": 19
+    },
+    "1": {
+      "Class": "AActor",
+      "Components": [
+        {
+          "AlwaysFaceCamera": true,
+          "AttachParentUUID": 134,
+          "Class": "UUUIDTextRenderComponent",
+          "Location": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "Text": "Text",
+          "TextColor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 133,
+          "WorldSize": 0.30000001192092896
+        },
+        {
+          "AttachParentUUID": 0,
+          "Class": "UStaticMeshComponent",
+          "Location": [
+            5.753748893737793,
+            -2.422572374343872,
+            -0.5747666358947754
+          ],
+          "Materials": [
+            "Mat_maverick.012",
+            "Mat_maverick.011",
+            "Mat_maverick.008",
+            "Mat_maverick.009",
+            "Mat_maverick.010"
+          ],
+          "ObjStaticMeshAsset": "chopper.Model",
+          "Rotation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "Scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "UUID": 134
+        },
+        {
+          "Amplitude": 1.0,
+          "Class": "UMovementComponent",
+          "Enabled": true,
+          "Speed": 2.0,
+          "UUID": 135
+        }
+      ],
+      "RootComponentUUID": 134,
+      "UUID": 132
+    }
+  }
+}

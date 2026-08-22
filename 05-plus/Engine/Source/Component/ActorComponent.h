@@ -1,0 +1,38 @@
+#pragma once
+#include "Object/Object.h"
+
+class FArchive;
+class AActor;
+
+class ENGINE_API UActorComponent : public UObject
+{
+public:
+	DECLARE_RTTI(UActorComponent, UObject)
+
+	~UActorComponent() override = default;
+
+	AActor* GetOwner() const { return Owner; }
+	void SetOwner(AActor* InOwner) { Owner = InOwner; }
+
+	bool IsRegistered() const { return bRegistered; }
+	virtual void OnRegister() { bRegistered = true; }
+	virtual void OnUnregister() { bRegistered = false; }
+	virtual void BeginPlay() { bBegunPlay = true; bCanEverTick = true; bTickEnabled = true; }
+	virtual void Tick(float DeltaTime) {}
+	bool HasBegunPlay() const { return bBegunPlay; }
+	bool CanTick() const { return bCanEverTick && bTickEnabled; }
+	void SetComponentTickEnabled(bool bEnabled) { bTickEnabled = bEnabled; }
+
+	virtual void Serialize(FArchive& Ar);
+
+	/** copy constructor로 복사된 Owner 포인터를 재설정하고 플레이 상태를 초기화한다. */
+	virtual void DuplicateSubObjects() override;
+
+protected:
+	TObjectPtr<AActor> Owner;
+	bool bRegistered = false;
+	bool bBegunPlay = false;
+	bool bCanEverTick = false;
+	bool bTickEnabled = true;
+};
+

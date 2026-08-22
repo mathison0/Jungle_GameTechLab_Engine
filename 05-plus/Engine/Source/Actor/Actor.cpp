@@ -1,0 +1,394 @@
+#include "Actor.h"
+#include "Object/ObjectFactory.h"
+#include "Component/UUIDTextRenderComponent.h"
+#include "Object/Class.h"
+#include "Renderer/Material.h"
+#include "Component/TextRenderComponent.h"
+#include "Component/SceneComponent.h"
+#include "Debug/EngineLog.h"
+#include "Serializer/Archive.h"
+#include "Scene/Scene.h"
+#include <utility>
+IMPLEMENT_RTTI(AActor, UObject)
+
+namespace {
+	FVector GZeroVector{};
+}
+
+UScene* AActor::GetScene() const { return Scene; }
+void AActor::SetScene(UScene* InScene) { Scene = InScene; }
+UWorld* AActor::GetWorld() const
+{
+	if (Scene)
+	{
+		return Scene->GetTypedOuter<UWorld>();
+	}
+	return nullptr;
+}
+USceneComponent* AActor::GetRootComponent() const { return RootComponent; }
+
+void AActor::SetRootComponent(USceneComponent* InRootComponent)
+{
+	RootComponent = InRootComponent;
+	if (RootComponent)
+	{
+		RootComponent->SetOwner(this);
+	}
+}
+
+const TArray<UActorComponent*>& AActor::GetComponents() const { return OwnedComponents; }
+
+UActorComponent* AActor::GetComponentByExactClass(const UClass* InClass) const
+{
+	if (InClass == nullptr)
+	{
+		return nullptr;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->IsPendingKill() && Component->GetClass() == InClass)
+		{
+			return Component;
+		}
+	}
+
+	return nullptr;
+}
+
+void AActor::AddOwnedComponent(UActorComponent* InComponent)
+{
+	if (InComponent == nullptr)
+	{
+		return;
+	}
+
+	auto It = std::find(OwnedComponents.begin(), OwnedComponents.end(), InComponent);
+	if (It != OwnedComponents.end())
+	{
+		return;
+	}
+
+	OwnedComponents.push_back(InComponent);
+	InComponent->SetOwner(this);
+
+	if (RootComponent == nullptr && InComponent->IsA(USceneComponent::StaticClass()))
+	{
+		RootComponent = static_cast<USceneComponent*>(InComponent);
+	}
+}
+
+void AActor::RemoveOwnedComponent(UActorComponent* InComponent)
+{
+	if (InComponent == nullptr)
+	{
+		return;
+	}
+
+	std::erase(OwnedComponents, InComponent);
+
+	if (RootComponent == InComponent)
+	{
+		RootComponent = nullptr;
+	}
+
+	InComponent->SetOwner(nullptr);
+}
+
+void AActor::PostSpawnInitialize()
+{
+	if (GetComponentByClass<UUUIDTextRenderComponent>() == nullptr)
+	{
+		UUUIDTextRenderComponent* UUIDComponent =
+			FObjectFactory::ConstructObject<UUUIDTextRenderComponent>(this, "UUIDTextRenderComponent");
+
+		if (UUIDComponent)
+		{
+			AddOwnedComponent(UUIDComponent);
+
+			UUIDComponent->SetWorldOffset(FVector(0.0f, 0.0f, 0.3f));
+			UUIDComponent->SetWorldSize(0.3f);
+			UUIDComponent->SetTextColor(FVector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->IsRegistered())
+		{
+			Component->OnRegister();
+		}
+		if (UPrimitiveComponent* PrimComp = dynamic_cast<UPrimitiveComponent*>(Component))
+		{
+			PrimComp->UpdateBounds();
+		}
+	}
+}
+
+void AActor::BeginPlay()
+{
+	if (bActorBegunPlay)
+	{
+		return;
+	}
+
+	bActorBegunPlay = true;
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && !Component->HasBegunPlay())
+		{
+			Component->BeginPlay();
+		}
+	}
+}
+
+void AActor::Tick(float DeltaTime)
+{
+	if (!CanTick() || bPendingDestroy)
+	{
+		return;
+	}
+
+	for (UActorComponent* Component : OwnedComponents)
+	{
+		if (Component && Component->CanTick())
+		{
+			Component->Tick(DeltaTime);
+		}
+	}
+}
+
+void AActor::EndPlay()
+{
+}
+
+void AActor::Destroy()
+{
+	if (bPendingDestroy)
+	{
+		return;
+	}
+
+	bPendingDestroy = true;
+	MarkPendingKill();
+
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp)
+		{
+			Comp->MarkPendingKill();
+		}
+	}
+}
+
+void AActor::Serialize(FArchive& Ar)
+{
+	if (Ar.IsSaving())// Save Actor property
+	{
+		FString ClassName = GetClass()->GetName();
+		Ar.Serialize("Class", ClassName);
+		Ar.Serialize("UUID", UUID);
+
+		uint32 RootCompUUID = RootComponent ? RootComponent->UUID : 0;
+		Ar.Serialize("RootComponentUUID", RootCompUUID);
+
+		TArray<FArchive*> ComponentArchives;
+		for (UActorComponent* Component : OwnedComponents)
+		{
+			if (Component)
+			{
+				FArchive* ComponentArchive = new FArchive(true);
+
+				FString ComponentClassName = Component->GetClass()->GetName();
+				ComponentArchive->Serialize("Class", ComponentClassName);
+
+				Component->Serialize(*ComponentArchive);
+				ComponentArchives.push_back(ComponentArchive);
+			}
+		}
+
+		Ar.Serialize("Components", ComponentArchives);
+
+		for (FArchive* ComponentArchive : ComponentArchives) delete ComponentArchive;
+	}
+	else//Load 
+	{
+		if (Ar.Contains("UUID"))
+		{
+			uint32 SavedUUID = 0;
+			Ar.Serialize("UUID", SavedUUID);
+
+			GUUIDToObjectMap.erase(UUID);
+			if (auto It = GUUIDToObjectMap.find(SavedUUID); It != GUUIDToObjectMap.end() && It->second != this)
+			{
+				It->second->UUID = 0;
+				GUUIDToObjectMap.erase(It);
+			}
+			UUID = SavedUUID;
+			GUUIDToObjectMap[SavedUUID] = this;
+
+			for (UActorComponent* Component : OwnedComponents)
+			{
+				if (Component)
+				{
+					Component->SetOwner(this);
+				}
+			}
+
+		}
+
+		uint32 SavedRootCompUUID = 0;
+		TArray<std::pair<USceneComponent*, uint32>> PendingAttachParents;
+		if (Ar.Contains("RootComponentUUID"))
+		{
+			Ar.Serialize("RootComponentUUID", SavedRootCompUUID);
+		}
+
+		if (Ar.Contains("Components"))
+		{
+			TArray<FArchive*> ComponentArchives;
+			Ar.Serialize("Components", ComponentArchives);
+
+			for (FArchive* ComponentArchive : ComponentArchives)
+			{
+				if (ComponentArchive->Contains("Class"))
+				{
+					FString ComponentClassName;
+					ComponentArchive->Serialize("Class", ComponentClassName);
+
+
+					UClass* ComponentClass = UClass::FindClass(ComponentClassName);
+					if (ComponentClass)
+					{
+						UActorComponent* TargetComponent = GetComponentByExactClass(ComponentClass);
+
+						if (!TargetComponent)
+						{
+							UObject* NewObject = FObjectFactory::ConstructObject(ComponentClass, this);
+							TargetComponent = static_cast<UActorComponent*>(NewObject);
+
+							if (TargetComponent)
+							{
+								AddOwnedComponent(TargetComponent);
+							}
+						}
+
+						if (TargetComponent)
+						{
+							TargetComponent->Serialize(*ComponentArchive);
+
+							if (TargetComponent->IsA(USceneComponent::StaticClass()))
+							{
+								uint32 AttachParentUUID = 0;
+								if (ComponentArchive->Contains("AttachParentUUID"))
+								{
+									ComponentArchive->Serialize("AttachParentUUID", AttachParentUUID);
+								}
+								PendingAttachParents.emplace_back(static_cast<USceneComponent*>(TargetComponent), AttachParentUUID);
+							}
+						}
+					}
+					else
+					{
+						UE_LOG("[Serialize] Unknown Component Class: %s", ComponentClassName.c_str());
+					}
+				}
+			}
+			for (FArchive* ComponentArchive : ComponentArchives) delete ComponentArchive;
+		}
+
+		if (SavedRootCompUUID != 0)
+		{
+			for (UActorComponent* Comp : OwnedComponents)
+			{
+				if (Comp && Comp->UUID == SavedRootCompUUID && Comp->IsA(USceneComponent::StaticClass()))
+				{
+					RootComponent = static_cast<USceneComponent*>(Comp);
+					break;
+				}
+			}
+		}
+		if (RootComponent)
+		{
+			for (const auto& PendingAttachParent : PendingAttachParents)
+			{
+				USceneComponent* SceneComp = PendingAttachParent.first;
+				if (SceneComp == nullptr || SceneComp == RootComponent)
+				{
+					continue;
+				}
+
+				USceneComponent* AttachParent = RootComponent;
+				if (PendingAttachParent.second != 0)
+				{
+					for (UActorComponent* Comp : OwnedComponents)
+					{
+						if (Comp && Comp->UUID == PendingAttachParent.second && Comp->IsA(USceneComponent::StaticClass()))
+						{
+							AttachParent = static_cast<USceneComponent*>(Comp);
+							break;
+						}
+					}
+				}
+
+				if (AttachParent && AttachParent != SceneComp)
+				{
+					SceneComp->AttachTo(AttachParent);
+				}
+			}
+		}
+	}
+}
+const FVector& AActor::GetActorLocation() const
+{
+	if (RootComponent == nullptr)
+	{
+		return GZeroVector;
+	}
+
+	return RootComponent->GetRelativeLocation();
+}
+
+void AActor::SetActorLocation(const FVector& InLocation)
+{
+	if (RootComponent == nullptr)
+	{
+		return;
+	}
+
+	RootComponent->SetRelativeLocation(InLocation);
+}
+
+void AActor::DuplicateSubObjects()
+{
+	// 1. Scene 캐시를 복사된 Outer(= Scene_copy)로 재설정한다.
+	Scene = GetTypedOuter<UScene>();
+
+	// 2. copy constructor가 얕게 복사한 OwnedComponents를 깊은 복사본으로 교체한다.
+	USceneComponent* OrigRoot = RootComponent;
+	TArray<UActorComponent*> OrigComps = OwnedComponents;
+	OwnedComponents.clear();
+	RootComponent = nullptr;
+
+	for (UActorComponent* OrigComp : OrigComps)
+	{
+		if (!OrigComp) continue;
+
+		// 컴포넌트를 this(= Actor_copy)를 Outer로 하여 복사한다.
+		UActorComponent* CompCopy = static_cast<UActorComponent*>(OrigComp->Duplicate(this));
+		if (!CompCopy) continue;
+
+		OwnedComponents.push_back(CompCopy);
+
+		// 원본 RootComponent에 해당하는 복사본을 RootComponent로 재연결한다.
+		if (OrigComp == OrigRoot)
+		{
+			RootComponent = static_cast<USceneComponent*>(CompCopy);
+		}
+	}
+
+	// 3. PIE에서 BeginPlay가 새로 호출되도록 상태를 초기화한다.
+	bActorBegunPlay = false;
+	bPendingDestroy = false;
+}
